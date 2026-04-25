@@ -27,7 +27,7 @@ export class Selector implements SelectorInterface{
     constructor(select: { [key: string]: string },options:{
         limit?:number,
         searchOff?:boolean,
-        trigger?:()=>void,
+        trigger?:Function,
         hiddenInput?:string,
         direction?:SELECTOR_DIRECTION,
         towards?:SELECTOR_TOWARDS,

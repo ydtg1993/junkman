@@ -5,23 +5,30 @@ import { request } from '../../aid/request';
 import { imgDelay } from '../../aid/imgdelay';
 import { Menu } from '../selector/menu';
 import { Switcher } from '../selector/switcher';
+import { SELECTOR_DIRECTION } from '../selector/init';
 
 export interface Column {
     name: string;
     field: string;
     type: 'text' | 'input' | 'select' | 'date' | 'image' | 'hidden' |
         'textarea' | 'number' | 'email' | 'password' | 'checkbox' | 'toggle' |
-        'switcher' | 'html';
+        'switcher' | 'html' | 'time' | 'datetime-local' | 'url';
     width?: string;
     minWidth?: string;
     align?: 'left' | 'center' | 'right';
-    pinned?: 'left' | 'right';           // 固定列
+    pinned?: 'left' | 'right';
     editable?: boolean;
-    options?: {                          // 用于 select / switcher
+    options?: {
         list: { key: string | number; value: string }[];
         multiple?: boolean;
     };
-    config?: any;                        // 用于 switcher 的方向等 (e.g., { towards: SELECTOR_TOWARDS.Horizontal })
+    config?: {
+        icon?: string;
+        pattern?: string;
+        validationMessage?: string;
+        attributes?: Record<string, string>;
+        towards?: any;          // 用于 Switcher 方向
+    };
     delay?: boolean;
     zoomOptions?: any;
 }
@@ -32,7 +39,7 @@ export interface TableOptions {
     border?: boolean;
     zebra?: boolean;
     hover?: boolean;
-    maxHeight?: string;                  // 默认 '400px'
+    maxHeight?: string;
     updateUrl?: string;
     deleteUrl?: string;
     onDataChange?: (data: any[]) => void;
@@ -136,7 +143,7 @@ export class EditableTable {
         for (const col of this.columns) {
             const td = document.createElement('td');
             td.style.padding = '0.25rem 0.5rem';
-            td.className = this.getCellClasses(col) + ' align-middle';
+            td.className = this.getCellClasses(col) + ' align-middle overflow-visible';
             if (col.minWidth) td.style.minWidth = col.minWidth;
             const value = rowData[col.field] ?? '';
             this.renderCell(td, col, value, index);
@@ -167,6 +174,50 @@ export class EditableTable {
         this.tbodyDom.appendChild(tr);
     }
 
+    private createIconInput(
+        type: string,
+        value: string,
+        icon?: string,
+        pattern?: string,
+        validationMessage?: string,
+        extraAttributes?: Record<string, string>
+    ): HTMLElement {
+        const container = document.createElement('label');
+        container.className = 'input input-bordered input-sm flex items-center gap-1 w-full';
+
+        if (icon) {
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'text-base-content/50';
+            iconSpan.textContent = icon;
+            container.appendChild(iconSpan);
+        }
+
+        const input = document.createElement('input');
+        input.type = type;
+        input.value = value;
+        input.className = 'w-full bg-transparent outline-none border-none p-0 h-auto leading-none';
+        if (pattern) {
+            input.pattern = pattern;
+            input.title = validationMessage || '格式不正确';
+            input.addEventListener('input', () => {
+                if (input.checkValidity()) {
+                    input.classList.remove('text-error');
+                } else {
+                    input.classList.add('text-error');
+                }
+            });
+        }
+        if (extraAttributes) {
+            for (const key in extraAttributes) {
+                if (extraAttributes.hasOwnProperty(key)) {
+                    input.setAttribute(key, extraAttributes[key]);
+                }
+            }
+        }
+        container.appendChild(input);
+        return container;
+    }
+
     private renderCell(td: HTMLElement, col: Column, value: any, rowIndex: number) {
         const isEditable = col.editable !== false &&
             !['text', 'image', 'hidden', 'html'].includes(col.type);
@@ -177,13 +228,23 @@ export class EditableTable {
                 td.textContent = value;
                 break;
             case 'input':
-            case 'number':
-            case 'email':
-            case 'password':
+            case 'time':
+            case 'datetime-local':
+            case 'date':
                 const input = document.createElement('input');
                 input.className = 'input input-bordered input-sm w-full';
                 input.value = value;
-                if (col.type !== 'input') input.type = col.type;
+                if (col.type === 'time') input.type = 'time';
+                else if (col.type === 'datetime-local') input.type = 'datetime-local';
+                else if (col.type === 'date') input.type = 'date';
+                else input.type = 'text';
+                if (col.config?.attributes) {
+                    for (const key in col.config.attributes) {
+                        if (col.config.attributes.hasOwnProperty(key)) {
+                            input.setAttribute(key, col.config.attributes[key]);
+                        }
+                    }
+                }
                 if (isEditable) {
                     input.addEventListener('change', () => {
                         this.data[rowIndex][field] = input.value;
@@ -194,6 +255,37 @@ export class EditableTable {
                     input.disabled = true;
                 }
                 td.appendChild(input);
+                break;
+            case 'number':
+            case 'email':
+            case 'password':
+            case 'url':
+            {
+                const inputType = col.type === 'number' ? 'number' :
+                    col.type === 'email' ? 'email' :
+                        col.type === 'password' ? 'password' : 'url';
+                const iconInput = this.createIconInput(
+                    inputType,
+                    value,
+                    col.config?.icon,
+                    col.config?.pattern,
+                    col.config?.validationMessage,
+                    col.config?.attributes
+                );
+                if (isEditable) {
+                    const inputEl = iconInput.querySelector('input')!;
+                    inputEl.addEventListener('change', () => {
+                        this.data[rowIndex][field] = inputEl.value;
+                        this.triggerChange();
+                        this.triggerUpdate(rowIndex, field, inputEl.value);
+                    });
+                } else {
+                    const inputEl = iconInput.querySelector('input')!;
+                    inputEl.disabled = true;
+                    iconInput.classList.add('opacity-50');
+                }
+                td.appendChild(iconInput);
+            }
                 break;
             case 'textarea':
                 const textarea = document.createElement('textarea');
@@ -213,7 +305,6 @@ export class EditableTable {
                 break;
             case 'select':
                 if (isEditable) {
-                    // 使用 Menu 组件
                     const selectData: { [key: string]: string } = {};
                     if (col.options?.list) {
                         for (const opt of col.options.list) {
@@ -233,9 +324,15 @@ export class EditableTable {
                             this.triggerUpdate(rowIndex, field, data.value);
                         },
                         show: false,
+                        direction: SELECTOR_DIRECTION.Up,
                         parentNode: menuContainer,
                     });
                     menu.make();
+                    const triggerEl = menuContainer.querySelector('.btn');
+                    if (triggerEl) {
+                        triggerEl.classList.remove('btn-sm');
+                        triggerEl.classList.add('btn-xs');
+                    }
                     if (value) {
                         menu.selected([String(value)]);
                     }
@@ -265,6 +362,11 @@ export class EditableTable {
                         parentNode: switcherContainer,
                     });
                     switcher.selected([String(value)]).make();
+                    const buttons = switcherContainer.querySelectorAll('.btn');
+                    buttons.forEach(btn => {
+                        btn.classList.remove('btn-sm');
+                        btn.classList.add('btn-xs');
+                    });
                     td.appendChild(switcherContainer);
                 } else {
                     const plainOption = col.options?.list?.find(opt => String(opt.key) === String(value));
@@ -302,24 +404,6 @@ export class EditableTable {
                     toggle.disabled = true;
                 }
                 td.appendChild(toggle);
-                break;
-            case 'date':
-                const dateInput = document.createElement('input');
-                dateInput.className = 'input input-bordered input-sm w-full';
-                dateInput.value = value;
-                if (isEditable) {
-                    dateInput.addEventListener('change', () => {
-                        this.data[rowIndex][field] = dateInput.value;
-                        this.triggerChange();
-                        this.triggerUpdate(rowIndex, field, dateInput.value);
-                    });
-                    if (col.config && (window as any).flatpickr) {
-                        (window as any).flatpickr(dateInput, col.config);
-                    }
-                } else {
-                    dateInput.disabled = true;
-                }
-                td.appendChild(dateInput);
                 break;
             case 'image':
                 const img = document.createElement('img');
