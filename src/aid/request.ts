@@ -3,65 +3,60 @@ export function request({
                             method = "GET",
                             header = {},
                             data = {},
-                            callback = null,
-                            error_callback = null,
                             timeout = 30000
                         }: {
     url: string;
     method?: string;
     header?: Record<string, any>;
     data?: Record<string, any>;
-    callback?: ((result: any) => void) | null;
-    error_callback?: ((error: any) => void) | null;
     timeout?: number;
-}) {
-    let xhr = new XMLHttpRequest();
-    if (method === 'GET') {
-        url = ((uri, params)=>{
-            let paramsArray: string[] = [];
-            if (Object.keys(params).length === 0) return uri;
-            Object.keys(params).forEach(key => params[key] && paramsArray.push(`${key}=${params[key]}`));
-            if (uri.search(/\?/) === -1) {
-                uri += `?${paramsArray.join('&')}`;
-            } else {
-                uri += `&${paramsArray.join('&')}`;
+}): Promise<any> {
+    return new Promise((resolve, reject) => {
+        let xhr = new XMLHttpRequest();
+        if (method === 'GET') {
+            // 参数拼接逻辑，修复 falsy 值丢失和编码问题
+            const paramsArray: string[] = [];
+            if (Object.keys(data).length > 0) {
+                Object.keys(data).forEach(key => {
+                    if (data[key] != null) {
+                        paramsArray.push(`${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`);
+                    }
+                });
             }
-            return uri;
-        })(url, data);
-    }
-    xhr.open(method, url, true);
-    xhr.timeout = timeout;
-    if (header) {
-        for (let h in header) {
-            if (header.hasOwnProperty(h)) xhr.setRequestHeader(h, header[h]);
+            if (paramsArray.length) {
+                url += (url.includes('?') ? '&' : '?') + paramsArray.join('&');
+            }
         }
-    }
-    if (method === 'GET') {
-        xhr.setRequestHeader("Content-type", "application/text;charset=UTF-8");
-        xhr.responseType = "text";
-        xhr.send(null);
-    } else {
-        if (data instanceof FormData) {
-            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-            xhr.responseType = "json";
-            xhr.send(data);
+        xhr.open(method, url, true);
+        xhr.timeout = timeout;
+        if (header) {
+            for (let h in header) {
+                if (header.hasOwnProperty(h)) xhr.setRequestHeader(h, header[h]);
+            }
+        }
+        if (method === 'GET') {
+            xhr.setRequestHeader("Content-type", "application/text;charset=UTF-8");
+            xhr.responseType = "text";
+            xhr.send(null);
         } else {
-            xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-            xhr.responseType = "json";
-            xhr.send(JSON.stringify(data));
+            if (data instanceof FormData) {
+                xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+                xhr.responseType = "json";
+                xhr.send(data);
+            } else {
+                xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                xhr.responseType = "json";
+                xhr.send(JSON.stringify(data));
+            }
         }
-    }
-    xhr.onload = function () {
-        if (this.status >= 200 && this.status < 300) return;
-    };
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState === xhr.DONE && xhr.status === 200) {
-            let response = xhr.response;
-            if (typeof callback === 'function') callback(response);
-        }
-    };
-    xhr.onerror = function (e) {
-        console.error(e);
-        if (typeof error_callback === 'function') error_callback(e);
-    };
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(xhr.response);
+            } else {
+                reject(new Error(`HTTP ${xhr.status}`));
+            }
+        };
+        xhr.ontimeout = () => reject(new Error('Request timeout'));
+        xhr.onerror = () => reject(new Error('Network error'));
+    });
 }

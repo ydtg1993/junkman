@@ -1,15 +1,18 @@
-import {loader} from './aid/loader';
 import {contextmenu} from './aid/contextmenu';
 import {request} from './aid/request';
 import {createDOMFromTree} from './aid/dombuilder'
 import {imgDelay} from "./aid/imgdelay";
 import {Icon} from "./aid/icon";
-
-import {Tip} from './utils/tip/index';
 import {Menu} from './utils/selector/menu';
 import {SELECTOR_DIRECTION,SELECTOR_TOWARDS,SELECTOR_MODE} from './utils/selector/init'
 import {Switcher} from "./utils/selector/switcher";
 import {Modal} from "./utils/modal/index";
+import { CascadeSelector } from './utils/cascade';
+import { CascadeTree } from './utils/cascade/tree';
+import { EditableTable } from './utils/table';
+import { Sortable } from './utils/sortable';
+import { Paginator } from './utils/selector/paginator';
+import { dimensionalTree } from './aid/tree';
 
 const selector = {
     /**
@@ -41,9 +44,18 @@ const selector = {
     Switcher:Switcher,
 };
 
-export {
-    request, loader, contextmenu,createDOMFromTree,imgDelay,Icon,
-    Tip,
-    Modal,
-    selector, SELECTOR_DIRECTION,SELECTOR_TOWARDS,SELECTOR_MODE
-};
+// 基础工具
+export { request, contextmenu, createDOMFromTree, imgDelay, Icon, dimensionalTree };
+// 模态框
+export { Modal };
+// 选择器组件
+export { selector, SELECTOR_DIRECTION, SELECTOR_TOWARDS, SELECTOR_MODE };
+export { Menu, Switcher };
+// 级联组件
+export { CascadeSelector, CascadeTree };
+// 表格组件
+export { EditableTable };
+// 拖拽排序
+export { Sortable };
+// 分页器
+export { Paginator };

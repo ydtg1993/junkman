@@ -1,56 +1,117 @@
-export function imgDelay(doms: HTMLElement[], time: number = 200, options = {zoom: false, width: 300, height: 0}) {
-    let i = 0;
-    for (let dom of doms) {
-        let src: string = dom.getAttribute('data-src')!;
-        setTimeout(() => {
-            dom.setAttribute('src', src);
-            dom.onload = function () {
+interface ImgDelayOptions {
+    zoom?: boolean;
+    width?: number;
+    height?: number; // >0 固定高度, <0 自动限制不超出视口
+}
+
+export function imgDelay(
+    doms: HTMLElement[],
+    time: number = 200,
+    options: ImgDelayOptions = { zoom: false, width: 300, height: 0 }
+) {
+    const cleanupFns: Array<() => void> = [];
+
+    doms.forEach((dom, idx) => {
+        const src = dom.getAttribute('data-src');
+        if (!src) return;
+
+        let previewImg: HTMLImageElement | null = null;
+        let timeoutId: number;
+
+        timeoutId = window.setTimeout(() => {
+            // 先绑定 onload，再设置 src，确保图片加载事件一定触发
+            dom.onload = () => {
                 if (!options.zoom) return;
-                let img = document.createElement('img');
-                dom.addEventListener('mouseover', function (e) {
-                    document.body.append(img);
-                    img.style.position = 'absolute';
-                    img.style.zIndex = '1000000';
-                    img.style.borderRadius = '3px';
-                    img.setAttribute('src', src);
 
-                    let width = img.naturalWidth;
-                    let height = img.naturalHeight;
-                    if (options.width !== 0) {
-                        width = options.width;
-                        height = img.naturalHeight * (options.width / img.naturalWidth);
-                    }
-                    if (options.height > 0) {
-                        height = options.height;
-                    } else if (options.height < 0) {
-                        if (img.naturalHeight > window.innerHeight) {
-                            height = (window.innerHeight - 10);
-                            width = img.naturalWidth * (height / img.naturalHeight);
+                const showPreview = (e: MouseEvent) => {
+                    if (previewImg) previewImg.remove();
+                    previewImg = document.createElement('img');
+
+                    // 通用样式
+                    previewImg.style.position = 'fixed';
+                    previewImg.style.zIndex = '1000000';
+                    previewImg.style.borderRadius = '3px';
+                    previewImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+
+                    function applyPreview() {
+                        if (!previewImg) return;
+
+                        let displayWidth = options.width || 300;
+                        let displayHeight = options.height ?? 0;
+                        const naturalWidth = previewImg.naturalWidth || 100;
+                        const naturalHeight = previewImg.naturalHeight || 100;
+
+                        if (displayHeight === 0) {
+                            // 高度自适应：按原始比例计算
+                            displayHeight = naturalHeight * (displayWidth / naturalWidth);
+                        } else if (displayHeight < 0) {
+                            // 高度限制：不超出视口 -20px
+                            const maxHeight = window.innerHeight - 20;
+                            if (naturalHeight > maxHeight) {
+                                displayHeight = maxHeight;
+                                displayWidth = naturalWidth * (maxHeight / naturalHeight);
+                            } else {
+                                displayHeight = naturalHeight;
+                                displayWidth = naturalWidth;
+                            }
                         }
-                    }
-                    img.style.width = `${width}px`;
-                    img.style.height = `${height}px`;
-                    let offsetY = height / 2;
 
-                    img.style.top = `${e.pageY - offsetY}px`;
-                    let distanceToBottom = window.innerHeight - e.clientY;
-                    if (window.innerHeight - e.clientY < offsetY + 5) {
-                        img.style.top = `${e.pageY - (offsetY + (offsetY - distanceToBottom) + 5)}px`;
-                    } else if (e.clientY < offsetY - 5) {
-                        img.style.top = `${e.pageY - (offsetY - (offsetY - e.clientY) - 5)}px`;
+                        // 应用尺寸
+                        previewImg.style.width = `${displayWidth}px`;
+                        previewImg.style.height = `${displayHeight}px`;
+
+                        // 位置计算：鼠标右下方偏移15px，且保证不出视口
+                        let left = e.clientX + 15;
+                        let top = e.clientY + 15;
+                        if (left + displayWidth > window.innerWidth) {
+                            left = e.clientX - displayWidth - 15;
+                        }
+                        if (top + displayHeight > window.innerHeight) {
+                            top = e.clientY - displayHeight - 15;
+                        }
+
+                        previewImg.style.left = `${left}px`;
+                        previewImg.style.top = `${top}px`;
+
+                        document.body.appendChild(previewImg);
                     }
-                    if (window.innerWidth - e.clientX < width) {
-                        img.style.left = `${e.pageX - width - 30}px`;
+
+                    // 关键修复：等待图片加载完成再计算尺寸
+                    if (previewImg.complete && previewImg.naturalWidth > 0) {
+                        applyPreview();
                     } else {
-                        img.style.left = `${e.pageX + 25}px`;
+                        previewImg.onload = applyPreview;
                     }
-                });
-                dom.addEventListener('mouseout', function (e) {
-                    e.stopPropagation();
-                    img.remove();
+
+                    // 最后设置 src（触发加载，若已缓存则立即触发 onload）
+                    previewImg.src = src;
+                };
+
+                const hidePreview = () => {
+                    if (previewImg) {
+                        previewImg.remove();
+                        previewImg = null;
+                    }
+                };
+
+                dom.addEventListener('mouseover', showPreview);
+                dom.addEventListener('mouseout', hidePreview);
+
+                cleanupFns.push(() => {
+                    dom.removeEventListener('mouseover', showPreview);
+                    dom.removeEventListener('mouseout', hidePreview);
+                    hidePreview();
                 });
             };
-        }, i * time);
-        i++;
-    }
+            // 必须先绑定 onload，再设置 src
+            dom.setAttribute('src', src);
+        }, idx * time);
+
+        cleanupFns.push(() => clearTimeout(timeoutId));
+    });
+
+    return () => {
+        cleanupFns.forEach(fn => fn());
+        cleanupFns.length = 0;
+    };
 }

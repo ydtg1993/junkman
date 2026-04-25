@@ -83,13 +83,11 @@ export class Selector implements SelectorInterface{
             console.error('selected params must be array[string] !');
             return this;
         }
-        selected = selected.map(function (elem) {
-            return elem.toString();
-        });
+        selected = selected.map(elem => elem.toString());
         this.selectedData = selected.filter(d => Object.keys(this.select).map(key => this.select[key]).includes(d));
-        (async ()=> {
-            let options = this.parentNode.querySelectorAll('.jk-option');
-            if(options.length>0) {
+        (async () => {
+            let options = this.parentNode.querySelectorAll('.dropdown-content li a');
+            if (options.length > 0) {
                 options.forEach((D) => {
                     if (!(D instanceof HTMLElement)) return;
                     let value = D.getAttribute('data-value') as string;
@@ -99,10 +97,9 @@ export class Selector implements SelectorInterface{
                         this.triggerEvent.enable = true;
                     }
                 });
-                let menu = this.parentNode.querySelector('.jk-selector-menu-list');
-                if (!this.show && (menu instanceof HTMLElement)) {
-                    menu.style.display = 'none';
-                }
+                // 关闭下拉
+                const content = this.parentNode.querySelector('.dropdown-content') as HTMLElement;
+                if (content && !this.show) content.classList.add('hidden');
             }
         })();
         return this;

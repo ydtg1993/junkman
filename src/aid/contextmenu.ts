@@ -1,34 +1,72 @@
-export function contextmenu(doms: HTMLElement[],
-                            options: { title: string, func: any }[],
-                            width: string = "70px") {
-    doms.forEach((dom) => {
-        dom.addEventListener("contextmenu", (e: MouseEvent) => {
-            e.preventDefault();
-            if (e.target instanceof HTMLElement) e.target.click();
+export interface ContextMenuItem {
+    title: string;
+    func: (event?: MouseEvent) => void;
+}
 
-            let ul = document.createElement('ul');
-            ul.className = "jk-contextmenu";
-            options.forEach((option) => {
-                let li = document.createElement('li');
-                li.insertAdjacentHTML('afterbegin', option.title);
-                li.style.width = width;
+let activeMenu: HTMLElement | null = null;
+
+function removeActiveMenu() {
+    if (activeMenu && activeMenu.parentNode) {
+        activeMenu.remove();
+        activeMenu = null;
+    }
+}
+
+export function contextmenu(
+    doms: HTMLElement[],
+    options: ContextMenuItem[],
+    width: string = "70px"
+) {
+    const handleContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        removeActiveMenu();
+
+        const ul = document.createElement('ul');
+        ul.className = "menu bg-base-200 rounded-box w-56";
+
+        options.forEach((option) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.textContent = option.title;
+            a.href = "#"; // 避免跳转
+            a.addEventListener('click', (clickEvent) => {
+                clickEvent.preventDefault();
+                clickEvent.stopPropagation();
+                removeActiveMenu();
                 if (typeof option.func === 'function') {
-                    li.addEventListener('click', () => {
-                        ul.remove();
-                        option.func();
-                    });
-                    ul.append(li);
+                    option.func(e);
                 }
             });
-            ul.style.top = `${e.pageY - 3}px`;
-            ul.style.left = `${e.pageX - 3}px`;
-            ul.addEventListener("contextmenu", (e) => {
-                e.preventDefault();
-            });
-            ul.addEventListener('mouseleave', () => {
-                ul.remove();
-            });
-            document.getElementsByTagName("BODY")[0].appendChild(ul);
+            // 如果没有回调函数，添加禁用样式
+            if (typeof option.func !== 'function') {
+                a.classList.add('text-gray-400', 'cursor-not-allowed');
+                a.href = ''; // remove link
+            }
+            li.appendChild(a);
+            ul.appendChild(li);
         });
+
+        ul.style.top = `${e.pageY - 3}px`;
+        ul.style.left = `${e.pageX - 3}px`;
+        ul.style.position = 'absolute';
+        ul.style.zIndex = '10000';
+        ul.addEventListener('contextmenu', (ev) => ev.preventDefault());
+        ul.addEventListener('mouseleave', () => removeActiveMenu());
+
+        document.body.appendChild(ul);
+        activeMenu = ul;
+    };
+
+    const bindings: Array<[HTMLElement, (e: MouseEvent) => void]> = [];
+    doms.forEach((dom) => {
+        dom.addEventListener('contextmenu', handleContextMenu);
+        bindings.push([dom, handleContextMenu]);
     });
+
+    return function destroy() {
+        bindings.forEach(([dom, handler]) => {
+            dom.removeEventListener('contextmenu', handler);
+        });
+        removeActiveMenu();
+    };
 }

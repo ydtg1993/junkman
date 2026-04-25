@@ -1,26 +1,31 @@
-import {Selector} from "./index";
-import {SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS, SelectorInterface} from "./init";
-import {Icon} from "../../aid/icon";
-import {createDOMFromTree} from "../../aid/dombuilder";
+import { Selector } from "./index";
+import { SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS, SelectorInterface } from "./init";
+import { Icon } from "../../aid/icon";
+import { createDOMFromTree } from "../../aid/dombuilder";
 
 export class Menu extends Selector implements SelectorInterface {
     private _selectedInputShow(selectedDom: HTMLElement) {
-        let names:string[] = [];
-        // @ts-ignore
-        this.selectData.forEach((d)=>{
+        let names: string[] = [];
+        this.selectData.forEach((d) => {
             let name = Object.keys(this.select).find(key => this.select[key] === d) as string;
             names.push(name);
         });
+        selectedDom.innerHTML = '';
         if (this.limitNumber === 1) {
-            selectedDom.innerHTML = `<span class="jk-text-trim">${names[0]}</span>`;
+            const span = document.createElement('span');
+            span.className = 'truncate';
+            span.textContent = names[0] || '';
+            selectedDom.appendChild(span);
             return;
         }
-        let html = '';
         for (let name of names) {
-            html += `<span class="jk-text-trim" title="${name}">${name}</span>`;
+            const span = document.createElement('span');
+            span.className = 'badge badge-sm bg-base-300 text-base-content mx-0.5 truncate';
+            span.textContent = name;
+            span.title = name;
+            selectedDom.appendChild(span);
         }
-        selectedDom.innerHTML = html;
-    };
+    }
 
     private _buildOptions(): {}[] {
         let tree = [];
@@ -31,42 +36,12 @@ export class Menu extends Selector implements SelectorInterface {
             this.value_line_hash[select[name]] = line;
             line++;
             tree.push({
-                className:"jk-option",
-                attributes: {'data-name': name, 'data-value': select[name]},
-                nodes: `<div class="jk-text-trim">${name}</div>`,
-                events: {
-                    click: (e: Event, option: HTMLElement) => {
-                        let selectedDom = this.parentNode.querySelector('.jk-selector-selected-area');
-                        if (!(selectedDom instanceof HTMLElement)) return;
-                        if (this.selectData.indexOf(select[name]) !== -1) {
-                            /*cancel*/
-                            this._tagCal(select[name], SELECTOR_MODE.Delete);
-                            (async ()=>{
-                                option.removeAttribute("active");
-                                let svg = option.querySelector("svg");
-                                if (svg) {
-                                    option.removeChild(svg);
-                                }
-                                this._selectedInputShow(selectedDom);
-                                if (this.selectData.length === 0) selectedDom.textContent = this.placeholder;
-                            })();
-                            return;
-                        }
-                        this._tagCal(select[name], SELECTOR_MODE.Insert);
-                        (async ()=>{
-                            if (this.limitNumber > 0 && this.selectData.length > this.limitNumber) {
-                                this.triggerEvent.enable = false;
-                                let index = this.value_line_hash[this.selectData[0].toString()] + 1;
-                                let popOpt = this.parentNode.querySelector(`.jk-selector-menu-options>div:nth-child(${index})`);
-                                if (popOpt instanceof HTMLElement) popOpt.click();
-                                this.triggerEvent.enable = true;
-                            }
-                            option.setAttribute('active', '1');
-                            option.insertAdjacentHTML('beforeend', Icon.check);
-                            this._selectedInputShow(selectedDom);
-                        })();
-                    }
-                }
+                tag: 'li',
+                nodes: [{
+                    tag: 'a',
+                    textContent: name,
+                    attributes: { 'data-name': name, 'data-value': select[name] },
+                }]
             });
         }
         return tree;
@@ -75,27 +50,24 @@ export class Menu extends Selector implements SelectorInterface {
     private _buildSearchInput(): {} {
         return {
             tag: 'input',
-            className: 'jk-input',
-            attributes: {placeholder: 'Search'},
+            className: 'input input-bordered input-xs w-full',
+            attributes: { placeholder: 'Search' },
             events: {
                 input: (e: Event, dom: HTMLElement) => {
-                    // @ts-ignore
-                    let keywords = dom.value;
-                    let options: NodeListOf<HTMLElement> = this.parentNode.querySelectorAll('.jk-selector-menu-options>div');
+                    let keywords = (dom as HTMLInputElement).value;
+                    let options: NodeListOf<HTMLElement> = this.parentNode.querySelectorAll('.dropdown-content li a');
                     if (!keywords) {
-                        options.forEach((option) => {
-                            option.style.display = 'flex';
-                        });
+                        options.forEach((a) => (a.parentElement as HTMLElement).classList.remove('hidden'));
                         return;
                     }
                     setTimeout(() => {
-                        options.forEach((option) => {
-                            let text: string = option.getAttribute('data-name') as string;
+                        options.forEach((a) => {
+                            let text = a.getAttribute('data-name') || '';
                             if (keywords.indexOf(text) !== -1 || text.indexOf(keywords) !== -1) {
-                                option.style.display = 'flex';
-                                return;
+                                (a.parentElement as HTMLElement).classList.remove('hidden');
+                            } else {
+                                (a.parentElement as HTMLElement).classList.add('hidden');
                             }
-                            option.style.display = 'none';
                         });
                     }, 300);
                 }
@@ -103,127 +75,108 @@ export class Menu extends Selector implements SelectorInterface {
         };
     }
 
-    private _directionShow() {
-        let listDom = this.parentNode.querySelector('.jk-selector-menu-list');
-        if (!(listDom instanceof HTMLElement)) return;
-        listDom.style.display = 'flex';
-        const directionMap = {
-            [SELECTOR_DIRECTION.Up]: {
-                top: `-${listDom.clientHeight + 2.5}px`,
-            },
-            [SELECTOR_DIRECTION.Mid]: {
-                top: `-${listDom.clientHeight / 2}px`
-            },
-            [SELECTOR_DIRECTION.Right]: {
-                top: '0',
-                left: `${this.parentNode.offsetWidth}px`
-            },
-            [SELECTOR_DIRECTION.RightMid]: {
-                top: `-${listDom.clientHeight / 2}px`,
-                left: `${this.parentNode.offsetWidth}px`
-            },
-            [SELECTOR_DIRECTION.RightUp]: {
-                top: `-${listDom.clientHeight + 2.5 - this.parentNode.offsetHeight}px`,
-                left: `${this.parentNode.offsetWidth}px`,
-            },
-            [SELECTOR_DIRECTION.Left]: {
-                top: '0',
-                left: `-${this.parentNode.offsetWidth}px`
-            },
-            [SELECTOR_DIRECTION.LeftMid]: {
-                top: `-${listDom.clientHeight / 2}px`,
-                left: `-${this.parentNode.offsetWidth}px`
-            },
-            [SELECTOR_DIRECTION.LeftUp]: {
-                top: `-${listDom.clientHeight + 2.5 - this.parentNode.offsetHeight}px`,
-                left: `-${this.parentNode.offsetWidth}px`
+    make(): this {
+        const directionClassMap: Record<number, string> = {
+            [SELECTOR_DIRECTION.Down]: 'dropdown-bottom',
+            [SELECTOR_DIRECTION.Up]: 'dropdown-top',
+            [SELECTOR_DIRECTION.Right]: 'dropdown-right',
+            [SELECTOR_DIRECTION.Left]: 'dropdown-left',
+            [SELECTOR_DIRECTION.RightUp]: 'dropdown-right dropdown-top',
+            [SELECTOR_DIRECTION.RightMid]: 'dropdown-right',
+            [SELECTOR_DIRECTION.LeftUp]: 'dropdown-left dropdown-top',
+            [SELECTOR_DIRECTION.LeftMid]: 'dropdown-left',
+            [SELECTOR_DIRECTION.Mid]: 'dropdown-bottom',
+        };
+        const dirClass = directionClassMap[this.direction] || 'dropdown-bottom';
+
+        const dropdownWrapper = document.createElement('div');
+        dropdownWrapper.className = `dropdown ${dirClass} w-full`;
+
+        const trigger = document.createElement('label');
+        trigger.tabIndex = 0;
+        trigger.className = 'btn btn-sm flex items-center gap-1 justify-between leading-none';
+        const selectedArea = document.createElement('span');
+        selectedArea.className = 'selected-area flex items-center gap-1 truncate';
+        selectedArea.textContent = this.placeholder;
+        trigger.appendChild(selectedArea);
+        trigger.appendChild(createDOMFromTree({ tag: 'span', textContent: '▼', className: 'text-xs' }));
+
+        const dropdownContent = document.createElement('div');
+        dropdownContent.className = 'dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 mt-1 hidden z-50';
+
+        if (!this.searchOff) {
+            const searchDiv = document.createElement('div');
+            searchDiv.className = 'px-2 mb-1';
+            searchDiv.appendChild(createDOMFromTree(this._buildSearchInput()));
+            dropdownContent.appendChild(searchDiv);
+        }
+
+        const ul = document.createElement('ul');
+        ul.className = 'overflow-y-auto';
+        ul.style.maxHeight = this.maxHeight;
+        const optionTree = this._buildOptions();
+        optionTree.forEach((item: any) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.textContent = item.nodes[0].textContent;
+            a.setAttribute('data-name', item.nodes[0].attributes['data-name']);
+            a.setAttribute('data-value', item.nodes[0].attributes['data-value']);
+            a.href = '#';
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const name = a.getAttribute('data-name')!;
+                const value = a.getAttribute('data-value')!;
+                if (this.selectData.indexOf(value) !== -1) {
+                    this._tagCal(value, SELECTOR_MODE.Delete);
+                    a.removeAttribute('active');
+                    const checkIcon = a.querySelector('.check-icon');
+                    if (checkIcon) checkIcon.remove();
+                    this._selectedInputShow(selectedArea);
+                    if (this.selectData.length === 0) selectedArea.textContent = this.placeholder;
+                } else {
+                    this._tagCal(value, SELECTOR_MODE.Insert);
+                    if (this.limitNumber > 0 && this.selectData.length > this.limitNumber) {
+                        this.triggerEvent.enable = false;
+                        const firstVal = this.selectData[0];
+                        const firstIdx = this.value_line_hash[firstVal] + 1;
+                        const popOpt = dropdownContent.querySelector(`li:nth-child(${firstIdx}) a`) as HTMLElement;
+                        if (popOpt) popOpt.click();
+                        this.triggerEvent.enable = true;
+                    }
+                    a.setAttribute('active', '1');
+                    a.insertAdjacentHTML('beforeend', '<span class="check-icon">' + Icon.check + '</span>');
+                    this._selectedInputShow(selectedArea);
+                }
+            });
+            li.appendChild(a);
+            ul.appendChild(li);
+        });
+        dropdownContent.appendChild(ul);
+
+        dropdownWrapper.appendChild(trigger);
+        dropdownWrapper.appendChild(dropdownContent);
+        this.parentNode.appendChild(dropdownWrapper);
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownContent.classList.toggle('hidden');
+        });
+
+        const closeDropdown = (e: MouseEvent) => {
+            if (!dropdownWrapper.contains(e.target as Node)) {
+                dropdownContent.classList.add('hidden');
             }
         };
-        let selectDom = this.parentNode.querySelector('.jk-selector-menu-select');
-        if (selectDom instanceof HTMLElement && [SELECTOR_DIRECTION.Left, SELECTOR_DIRECTION.LeftMid, SELECTOR_DIRECTION.LeftUp].includes(this.direction)) {
-            selectDom.style.flexDirection = 'row-reverse';
-        }
-        // @ts-ignore
-        const styles = directionMap[this.direction];
-        if (styles) {
-            Object.assign(listDom.style, styles);
-        }
-    }
+        document.addEventListener('click', closeDropdown);
 
-    make():this {
-        let domTree = {
-            className: 'jk jk-selector-menu',
-            events: {
-                click: () => this._directionShow(),
-                mouseleave: () => {
-                    if(this.show)return;
-                    let listDom = this.parentNode.querySelector('.jk-selector-menu-list');
-                    if (!(listDom instanceof HTMLElement)) return;
-                    listDom.style.display = 'none';
-                    if (!this.searchOff) {
-                        // @ts-ignore
-                        this.parentNode.querySelector(`.jk-selector-search>input`).value = '';
-                    }
-                }
-            },
-            nodes: [
-                {
-                    className: 'jk-input jk-selector-menu-select',
-                    nodes:
-                        (() => {
-                            let cursor = '';
-                            if ([SELECTOR_DIRECTION.Left,
-                                SELECTOR_DIRECTION.LeftMid,
-                                SELECTOR_DIRECTION.LeftUp].includes(this.direction)) {
-                                cursor = 'style="transform: rotate(90deg);"';
-                            }else if([SELECTOR_DIRECTION.Right,
-                                SELECTOR_DIRECTION.RightMid,
-                                SELECTOR_DIRECTION.RightUp].includes(this.direction)){
-                                cursor = 'style="transform: rotate(270deg);"';
-                            }
-                            let style = '';
-                            if(this.wrap){
-                                style = 'style="flex-wrap: wrap;"'
-                            }
-                            return `<div class="jk-selector-selected-area jk-text-trim${this.limitNumber != 1 ? ' multi' : ''}" ${style}>${this.placeholder}</div><div ${cursor}>▼</div>`;
-                        })(),
-                    styles: (() => {
-                        if ([SELECTOR_DIRECTION.Left,
-                            SELECTOR_DIRECTION.LeftMid,
-                            SELECTOR_DIRECTION.LeftUp].includes(this.direction)) {
-                            return {'flex-direction': 'row-reverse'};
-                        }
-                        return {};
-                    })()
-                },
-                {
-                    className: 'jk-selector-menu-list',
-                    nodes: (() => {
-                        let nodes = [];
-                        if (!this.searchOff) {
-                            nodes.push({className: 'jk-selector-search', nodes: [this._buildSearchInput()]});
-                        }
-                        nodes.push({className: 'jk-selector-menu-options jk-scroll', nodes: this._buildOptions(),styles:{maxHeight:this.maxHeight}});
-                        return nodes;
-                    })()
-                }
-            ]
-        };
-
-        createDOMFromTree(domTree,this.parentNode);
-
-        let listDom = this.parentNode.querySelector('.jk-selector-menu-list');
-        if(!(listDom instanceof HTMLElement))return this;
-        if ([SELECTOR_DIRECTION.LeftMid,
-            SELECTOR_DIRECTION.LeftUp,
-            SELECTOR_DIRECTION.RightMid,
-            SELECTOR_DIRECTION.RightUp].includes(this.direction)) {
-            listDom.style.height = listDom.clientHeight + 'px';
-        }
-        (async ()=> {
+        (async () => {
             this.delayExec();
-            if(!this.show) listDom.style.display = 'none';
+            if (this.show) {
+                dropdownContent.classList.remove('hidden');
+            }
         })();
+
         return this;
     }
 }
