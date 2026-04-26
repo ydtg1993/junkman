@@ -9,3 +9,10 @@ details[open] > summary > .expand-icon {
 [data-has-children="true"] .expand-icon {
     transition: transform 0.2s;
 }
+
+.sortable-placeholder {
+    background: rgba(0, 0, 0, 0.05);
+    border: 2px dashed #999;
+    border-radius: 6px;
+    box-sizing: border-box;
+}

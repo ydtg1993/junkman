@@ -89,11 +89,20 @@ export class EditableTable {
         this.renderHeader();
         this.renderBody();
         if (this.options.sortable) {
-            this.sortable = new Sortable(this.tbodyDom, (order) => {
-                const newData = order.map(i => this.data[i]);
-                this.data = newData;
-                this.triggerChange();
-            }, { handle: '[data-sort-handle]' });
+            this.sortable = new Sortable(this.tbodyDom, {
+                handle: '[data-sort-handle]',
+                onSort: (order) => {
+                    const map = new Map();
+
+                    this.data.forEach((row, index) => {
+                        const id = row.id ?? index;
+                        map.set(String(id), row);
+                    });
+
+                    this.data = order.map(i => map.get(String(i)));
+                    this.triggerChange();
+                }
+            });
         }
     }
 

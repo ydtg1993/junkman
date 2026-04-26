@@ -1,265 +1,292 @@
-// src/utils/sortable/index.ts
 export interface SortableOptions {
-    /** 动画持续时间（ms） */
-    animationSpeed?: number;
-    /** 动画缓动函数 */
-    animationEasing?: string;
-    /** 拖拽手柄选择器（如 '.drag-handle'），为空则整个项可拖拽 */
+    direction?: 'vertical' | 'horizontal';
     handle?: string;
-    /** 排列方向：'vertical'（默认）| 'horizontal' | 'grid' */
-    direction?: 'vertical' | 'horizontal' | 'grid';
-    /** 网格模式下列数，direction='grid' 时有效，默认 auto 自动计算 */
-    columns?: number;
+    animationSpeed?: number;
+    onSort?: (order: (string | number)[]) => void;
 }
 
 export class Sortable {
     private list: HTMLElement;
     private options: Required<SortableOptions>;
-    private onSort?: (newOrder: number[]) => void;
 
-    private items: HTMLElement[] = [];
     private dragItem: HTMLElement | null = null;
-    private dragHandle: HTMLElement | null = null;
-
-    private startX: number = 0;
-    private startY: number = 0;
-    private startLeft: number = 0;
-    private startTop: number = 0;
-
     private placeholder: HTMLElement | null = null;
-    private initialOrder: number[] = [];  // 拖拽开始时 order 数组
-    private currentIndex: number = -1;
-    private overIndex: number = -1;
-    private animating: boolean = false;
+    private clone: HTMLElement | null = null;           // 跟随鼠标的克隆体
+    private dragging = false;
+    private startIndex = -1;
 
-    private boundDragStart: (e: MouseEvent | TouchEvent) => void;
-    private boundDragMove: (e: MouseEvent | TouchEvent) => void;
-    private boundDragEnd: () => void;
+    private startPoint = { x: 0, y: 0 };
+    private startScrollTop = 0;
+    private startScrollLeft = 0;
 
-    constructor(list: HTMLElement, onSort?: (newOrder: number[]) => void, options: SortableOptions = {}) {
+    constructor(list: HTMLElement, options: SortableOptions = {}) {
         this.list = list;
-        this.onSort = onSort;
         this.options = {
-            animationSpeed: options.animationSpeed ?? 200,
-            animationEasing: options.animationEasing ?? 'ease-out',
-            handle: options.handle ?? '',
             direction: options.direction ?? 'vertical',
-            columns: options.columns ?? 0,
+            handle: options.handle ?? '',
+            animationSpeed: options.animationSpeed ?? 180,
+            onSort: options.onSort ?? (() => {}),
         };
-
-        // 绑定函数以便移除事件
-        this.boundDragStart = this.onDragStart.bind(this);
-        this.boundDragMove = this.onDragMove.bind(this);
-        this.boundDragEnd = this.onDragEnd.bind(this);
-
         this.init();
     }
 
     private init() {
-        this.list.addEventListener('mousedown', this.boundDragStart as EventListener);
-        this.list.addEventListener('touchstart', this.boundDragStart as EventListener, { passive: false });
-        // 让子项也可以继续触发?
+        this.list.addEventListener('pointerdown', this.onStart.bind(this));
     }
 
-    public destroy() {
-        this.list.removeEventListener('mousedown', this.boundDragStart as EventListener);
-        this.list.removeEventListener('touchstart', this.boundDragStart as EventListener);
-        window.removeEventListener('mousemove', this.boundDragMove as EventListener);
-        window.removeEventListener('mouseup', this.boundDragEnd);
-        window.removeEventListener('touchmove', this.boundDragMove as EventListener);
-        window.removeEventListener('touchend', this.boundDragEnd);
+    private getItems(): HTMLElement[] {
+        return Array.from(this.list.children)
+            .filter(el => {
+                const node = el as HTMLElement;
+                return (
+                    node.hasAttribute('data-sortable-item') &&
+                    node !== this.placeholder &&
+                    node !== this.dragItem
+                );
+            }) as HTMLElement[];
     }
 
-    private reset() {
-        this.items = Array.from(this.list.children) as HTMLElement[];
+    private isVertical(): boolean {
+        return this.options.direction === 'vertical';
     }
 
-    private getPrimaryAxis(e: MouseEvent | TouchEvent): { x: number; y: number } {
-        if (e instanceof TouchEvent) {
-            const touch = e.touches[0] || e.changedTouches[0];
-            return { x: touch?.clientX ?? 0, y: touch?.clientY ?? 0 };
-        }
-        return { x: e.clientX, y: e.clientY };
+    // 获取鼠标位置（根据方向返回主要坐标）
+    private getPoint(e: PointerEvent): number {
+        return this.isVertical() ? e.clientY : e.clientX;
     }
 
-    private onDragStart(e: MouseEvent | TouchEvent) {
-        if (this.animating) return;
-        this.reset();
-        if (this.items.length < 2) return;
+    // 获取元素的主要尺寸（高度或宽度）
+    private getPrimarySize(el: HTMLElement): number {
+        const rect = el.getBoundingClientRect();
+        return this.isVertical() ? rect.height : rect.width;
+    }
 
+    // 获取元素的主要位置（相对于视口）
+    private getPrimaryClientPos(el: HTMLElement): number {
+        const rect = el.getBoundingClientRect();
+        return this.isVertical() ? rect.top : rect.left;
+    }
+
+    // =========================
+    // START
+    // =========================
+    private onStart(e: PointerEvent) {
         let target = e.target as HTMLElement;
-        let handle: HTMLElement | null = null;
         let item: HTMLElement | null = null;
 
-        // 查找 handle 和 item
+        // 查找实际拖拽项
         while (target && target !== this.list) {
             if (this.options.handle && target.matches(this.options.handle)) {
-                handle = target;
+                item = target.closest('[data-sortable-item]') as HTMLElement;
+                break;
             }
             if (target.hasAttribute('data-sortable-item')) {
                 item = target;
+                break;
             }
-            target = target.parentElement as HTMLElement;
+            target = target.parentElement!;
         }
 
-        if (this.options.handle && !handle) return;
         if (!item) return;
 
-        const pos = this.getPrimaryAxis(e);
+        e.preventDefault();
+
         this.dragItem = item;
-        this.dragHandle = handle;
-        this.startX = pos.x;
-        this.startY = pos.y;
+        this.startIndex = this.getItems().indexOf(item);
+        this.startPoint = { x: e.clientX, y: e.clientY };
+        this.startScrollTop = this.list.scrollTop;
+        this.startScrollLeft = this.list.scrollLeft;
+
+        // 创建占位符
         const rect = item.getBoundingClientRect();
-        this.startLeft = rect.left;
-        this.startTop = rect.top;
-        this.currentIndex = this.items.indexOf(item);
-        if (this.currentIndex === -1) return;
-
-        // 锁定当前元素顺序
-        this.initialOrder = this.items.map((_, idx) => idx);
-
-        // 创建占位符（保持尺寸）
         this.placeholder = document.createElement('div');
-        this.placeholder.style.width = rect.width + 'px';
-        this.placeholder.style.height = rect.height + 'px';
-        this.placeholder.style.flexShrink = '0';
-        // 在 item 前插入占位符
-        item.parentNode?.insertBefore(this.placeholder, item);
+        this.placeholder.className = 'sortable-placeholder';
+        this.placeholder.style[this.isVertical() ? 'height' : 'width'] = `${this.getPrimarySize(item)}px`;
+        this.placeholder.style[this.isVertical() ? 'width' : 'height'] = '100%';
+        this.placeholder.style.display = 'block';
+        item.parentNode!.insertBefore(this.placeholder, item);
 
-        // 设置 item 为绝对定位（相对于列表）
-        this.list.style.position = 'relative';
-        item.style.position = 'absolute';
-        item.style.zIndex = '1000';
-        item.style.left = rect.left - this.list.getBoundingClientRect().left + 'px';
-        item.style.top = rect.top - this.list.getBoundingClientRect().top + 'px';
-        item.style.width = rect.width + 'px';
-        item.style.height = rect.height + 'px';
-        item.classList.add('opacity-80', 'shadow-lg');
+        // 创建克隆体
+        this.clone = item.cloneNode(true) as HTMLElement;
+        this.clone.style.position = 'fixed';
+        this.clone.style.top = `${rect.top}px`;
+        this.clone.style.left = `${rect.left}px`;
+        this.clone.style.width = `${rect.width}px`;
+        this.clone.style.height = `${rect.height}px`;
+        this.clone.style.margin = '0';
+        this.clone.style.zIndex = '10000';
+        this.clone.style.opacity = '0.8';
+        this.clone.style.pointerEvents = 'none';
+        this.clone.style.transition = 'none';
+        document.body.appendChild(this.clone);
 
-        // 绑定移动和释放事件
-        window.addEventListener('mousemove', this.boundDragMove as EventListener);
-        window.addEventListener('mouseup', this.boundDragEnd);
-        window.addEventListener('touchmove', this.boundDragMove as EventListener, { passive: false });
-        window.addEventListener('touchend', this.boundDragEnd);
+        // 隐藏原元素
+        item.style.display = 'none';
 
-        e.preventDefault();
+        this.dragging = true;
+
+        window.addEventListener('pointermove', this.onMove);
+        window.addEventListener('pointerup', this.onEnd);
     }
 
-    private onDragMove(e: MouseEvent | TouchEvent) {
-        if (!this.dragItem || !this.placeholder || this.animating) return;
-        const pos = this.getPrimaryAxis(e);
-        const deltaX = pos.x - this.startX;
-        const deltaY = pos.y - this.startY;
+    // =========================
+    // MOVE
+    // =========================
+    private onMove = (e: PointerEvent) => {
+        if (!this.dragging || !this.dragItem || !this.placeholder) return;
 
-        // 移动拖拽元素
-        const listRect = this.list.getBoundingClientRect();
-        const itemLeft = pos.x - this.startX + (this.startLeft - listRect.left);
-        const itemTop = pos.y - this.startY + (this.startTop - listRect.top);
-        this.dragItem.style.left = itemLeft + 'px';
-        this.dragItem.style.top = itemTop + 'px';
+        e.preventDefault();
 
-        // 计算当前悬停索引
-        const itemCenterX = itemLeft + this.dragItem.offsetWidth / 2;
-        const itemCenterY = itemTop + this.dragItem.offsetHeight / 2;
-
-        // 找到离中心点最近的可排序项（排除占位符和拖拽项）
-        let minDistance = Infinity;
-        let targetIndex = -1;
-        for (let i = 0; i < this.items.length; i++) {
-            const item = this.items[i];
-            if (item === this.dragItem) continue;
-            const rect = item.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2 - listRect.left;
-            const cy = rect.top + rect.height / 2 - listRect.top;
-            // 根据方向计算距离权重
-            let dist = 0;
-            if (this.options.direction === 'horizontal') {
-                dist = Math.abs(itemCenterX - cx);
-            } else if (this.options.direction === 'vertical') {
-                dist = Math.abs(itemCenterY - cy);
-            } else { // grid: 欧氏距离
-                dist = Math.hypot(itemCenterX - cx, itemCenterY - cy);
-            }
-            if (dist < minDistance) {
-                minDistance = dist;
-                targetIndex = i;
-            }
-        }
-
-        if (targetIndex !== -1 && targetIndex !== this.overIndex) {
-            this.overIndex = targetIndex;
-            // 更新占位符位置：移动到目标项的前面或后面
-            const targetItem = this.items[targetIndex];
-            if (this.initialOrder.indexOf(this.currentIndex) < this.initialOrder.indexOf(targetIndex)) {
-                // 拖拽项在后面，占位符插到目标项之后
-                targetItem.parentNode?.insertBefore(this.placeholder, targetItem.nextSibling);
+        // 1. 移动克隆体
+        const delta = this.isVertical() ? e.clientY - this.startPoint.y : e.clientX - this.startPoint.x;
+        if (this.clone) {
+            const startTop = parseFloat(this.clone.style.top);
+            const startLeft = parseFloat(this.clone.style.left);
+            if (this.isVertical()) {
+                this.clone.style.top = `${startTop + delta}px`;
             } else {
-                // 拖拽项在前面，占位符插到目标项之前
-                targetItem.parentNode?.insertBefore(this.placeholder, targetItem);
+                this.clone.style.left = `${startLeft + delta}px`;
             }
+            this.startPoint = { x: e.clientX, y: e.clientY };
         }
-        e.preventDefault();
-    }
 
-    private onDragEnd() {
-        if (!this.dragItem || !this.placeholder) return;
-        window.removeEventListener('mousemove', this.boundDragMove as EventListener);
-        window.removeEventListener('mouseup', this.boundDragEnd);
-        window.removeEventListener('touchmove', this.boundDragMove as EventListener);
-        window.removeEventListener('touchend', this.boundDragEnd);
+        // 2. 边缘自动滚动
+        this.autoScroll(e);
 
-        this.animating = true;
-        const item = this.dragItem;
-        item.classList.remove('opacity-80', 'shadow-lg');
+        // 3. 更新占位符位置
+        this.updatePlaceholderPosition(e);
+    };
 
-        // 获取目标位置（占位符的 index）
-        const children = Array.from(this.list.children);
-        const placeholderIndex = children.indexOf(this.placeholder);
-        // 移除占位符
-        this.placeholder.remove();
-        this.placeholder = null;
+    private autoScroll(e: PointerEvent) {
+        const scrollSpeed = 5;
+        const edgeThreshold = 50;
+        const rect = this.list.getBoundingClientRect();
+        const mouseY = e.clientY;
+        const mouseX = e.clientX;
 
-        const finalItems = Array.from(this.list.children) as HTMLElement[];
-
-        // 更稳健：根据当前元素顺序重新排列 DOM，并触发回调
-        // 我们通过记录原始索引和目标位置重新排列元素
-
-        // 获取所有子元素（除 dragItem 外）
-        const otherItems = finalItems.filter(el => el !== item);
-        // 如果目标插入位置有效，则插入
-        if (placeholderIndex >= 0 && placeholderIndex < otherItems.length) {
-            otherItems.splice(placeholderIndex, 0, item);
+        if (this.isVertical()) {
+            const distanceToTop = mouseY - rect.top;
+            const distanceToBottom = rect.bottom - mouseY;
+            if (distanceToTop < edgeThreshold && distanceToTop > 0) {
+                this.list.scrollTop -= scrollSpeed;
+            } else if (distanceToBottom < edgeThreshold && distanceToBottom > 0) {
+                this.list.scrollTop += scrollSpeed;
+            }
         } else {
-            otherItems.push(item); // 放到末尾
+            const distanceToLeft = mouseX - rect.left;
+            const distanceToRight = rect.right - mouseX;
+            if (distanceToLeft < edgeThreshold && distanceToLeft > 0) {
+                this.list.scrollLeft -= scrollSpeed;
+            } else if (distanceToRight < edgeThreshold && distanceToRight > 0) {
+                this.list.scrollLeft += scrollSpeed;
+            }
+        }
+    }
+
+    private updatePlaceholderPosition(e: PointerEvent) {
+        const mousePos = this.getPoint(e);
+        const items = this.getItems();
+        if (items.length === 0) return;
+        if (this.dragItem) {
+            // 临时恢复原元素的显示以便计算正确的边界（visibility: hidden 仍占位，但为准确获取其他元素位置，保留占位）
+        }
+        let targetItem: HTMLElement | null = null;
+        let insertAfter = false;
+
+        // 特殊处理：鼠标在最后一个元素下方（垂直）或右边（水平）
+        const lastItem = items[items.length - 1];
+        const firstItem = items[0];
+        if (lastItem) {
+            const lastItemPos = this.getPrimaryClientPos(lastItem);
+            const lastItemSize = this.getPrimarySize(lastItem);
+            const lastItemEnd = lastItemPos + lastItemSize;
+            if (mousePos > lastItemEnd) {
+                targetItem = lastItem;
+                insertAfter = true;
+            } else if (mousePos < this.getPrimaryClientPos(firstItem)) {
+                targetItem = firstItem;
+                insertAfter = false;
+            } else {
+                // 正常查找最近元素
+                let minDist = Infinity;
+                for (const el of items) {
+                    if (el === this.dragItem) continue;
+                    const elPos = this.getPrimaryClientPos(el);
+                    const elSize = this.getPrimarySize(el);
+                    const center = elPos + elSize / 2;
+                    const dist = Math.abs(mousePos - center);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        targetItem = el;
+                        insertAfter = mousePos > center;
+                    }
+                }
+            }
         }
 
-        // 清空列表并重新按顺序添加
-        this.list.innerHTML = '';
-        otherItems.forEach(el => this.list.appendChild(el));
-
-        // 计算新顺序（按 data-sortable-item 的原始索引无关，直接使用当前数组索引）
-        const newOrder = otherItems.map(el => this.items.indexOf(el) );
-
-        // 平滑移动到目标位置
-        item.style.transition = `all ${this.options.animationSpeed}ms ${this.options.animationEasing}`;
-        // 计算最终位置（相对于列表）
-        // 但此时元素已经是按顺序放置的，只需移除绝对定位即可让它回到文档流
-        item.style.position = '';
-        item.style.left = '';
-        item.style.top = '';
-        item.style.zIndex = '';
-        item.style.width = '';
-        item.style.height = '';
-        setTimeout(() => {
-            item.style.transition = '';
-            this.animating = false;
-            if (this.onSort) {
-                this.onSort(newOrder);
-            }
-            // 重置状态
-            this.dragItem = null;
-            this.overIndex = -1;
-        }, this.options.animationSpeed);
+        if (targetItem && this.placeholder) {
+            this.list.insertBefore(
+                this.placeholder,
+                insertAfter ? targetItem.nextSibling : targetItem
+            );
+        }
     }
+
+    // =========================
+    // END
+    // =========================
+    private onEnd = () => {
+        if (!this.dragging || !this.dragItem || !this.placeholder) return;
+
+        window.removeEventListener('pointermove', this.onMove);
+        window.removeEventListener('pointerup', this.onEnd);
+
+        // 移除克隆体
+        if (this.clone) {
+            this.clone.remove();
+            this.clone = null;
+        }
+
+        // 恢复原元素可见性
+        this.dragItem.style.display = '';
+
+        // 获取旧位置
+        const oldRect = this.dragItem.getBoundingClientRect();
+
+        // 将真实元素移动到 placeholder 位置
+        this.list.insertBefore(this.dragItem, this.placeholder);
+        this.placeholder.remove();
+
+        const newRect = this.dragItem.getBoundingClientRect();
+
+        // FLIP 动画
+        const dx = oldRect.left - newRect.left;
+        const dy = oldRect.top - newRect.top;
+        this.dragItem.style.transition = 'none';
+        this.dragItem.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(() => {
+            this.dragItem!.style.transition = `transform ${this.options.animationSpeed}ms ease`;
+            this.dragItem!.style.transform = '';
+        });
+
+        // 清理样式并触发回调
+        setTimeout(() => {
+            if (this.dragItem) {
+                this.dragItem.style.transition = '';
+                this.dragItem.style.transform = '';
+            }
+            this.dragItem = null;
+            this.placeholder = null;
+            this.dragging = false;
+
+            // 获取排序后的顺序（只考虑 data-sortable-item）
+            const order: (string | number)[] = [];
+            const currentItems = this.getItems();
+            currentItems.forEach(el => {
+                const id = el.dataset.id;
+                order.push(id !== undefined ? id : currentItems.indexOf(el));
+            });
+            this.options.onSort(order);
+        }, this.options.animationSpeed);
+    };
 }
