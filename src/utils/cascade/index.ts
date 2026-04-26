@@ -12,9 +12,7 @@ export class CascadeSelector {
     protected stacks: HTMLElement[] = [];
     protected selectedNodes: TreeNode[] = [];
     protected searchInput: HTMLInputElement | null = null;
-    protected searchResultPanel: HTMLElement | null = null;
-    protected searchResults: { stack: number; index: number }[] = [];
-    protected currentSearchIndex: number = 0;
+    protected searchDropdown: HTMLElement | null = null; // 搜索下拉菜单
     protected searchDebounceTimer: number | null = null;
     protected uniqueId: string;
 
@@ -48,7 +46,7 @@ export class CascadeSelector {
 
     private render() {
         this.container.innerHTML = '';
-        this.container.className = 'flex flex-col gap-2 bg-base-100 p-2 rounded-lg border border-base-300';
+        this.container.className = 'flex flex-col gap-2 bg-base-100 p-2 rounded-lg border border-base-300 relative';
 
         if (this.options.searchable) {
             const input = document.createElement('input');
@@ -229,12 +227,25 @@ export class CascadeSelector {
             }
         });
 
+        // 搜索输入处理
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => {
                 if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
                 this.searchDebounceTimer = window.setTimeout(() => {
-                    this.handleSearch(this.searchInput!.value);
+                    this.handleSearch(this.searchInput!.value.trim());
                 }, 300);
+            });
+            this.searchInput.addEventListener('focus', () => {
+                if (this.searchInput!.value.trim()) {
+                    this.handleSearch(this.searchInput!.value.trim());
+                }
+            });
+            // 点击外部关闭下拉
+            document.addEventListener('click', (e) => {
+                if (this.searchDropdown && !this.searchInput?.contains(e.target as Node) && !this.searchDropdown.contains(e.target as Node)) {
+                    this.searchDropdown.remove();
+                    this.searchDropdown = null;
+                }
             });
         }
 
@@ -254,6 +265,7 @@ export class CascadeSelector {
         });
     }
 
+    // ---------- 展开/收缩 ----------
     private expandToNextLevel(currentLevel: number, parentNode: FlattenedNode) {
         this.expandedParents[currentLevel] = String(parentNode.key);
         this.expandedParents.length = currentLevel + 1;
@@ -289,12 +301,10 @@ export class CascadeSelector {
         });
 
         this.collapseDeeperLevels(nextLevel);
-
         const firstVisible = nextStackDiv.querySelector('li:not(.hidden)');
         if (firstVisible) {
             firstVisible.scrollIntoView({ block: 'nearest' });
         }
-
         this.updateExpandIcons(currentLevel);
     }
 
@@ -384,6 +394,7 @@ export class CascadeSelector {
         }
     }
 
+    // ---------- 选中逻辑 ----------
     private addSelected(node: FlattenedNode) {
         if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) {
             this.removeSelected(this.selectedNodes[0].key);
@@ -448,7 +459,75 @@ export class CascadeSelector {
         return keys;
     }
 
-    // ---------- 修复的 setValue ----------
+    // ---------- 搜索（下拉菜单）----------
+    private handleSearch(keyword: string) {
+        // 移除旧的下拉
+        if (this.searchDropdown) {
+            this.searchDropdown.remove();
+            this.searchDropdown = null;
+        }
+        if (!keyword) return;
+
+        // 匹配所有节点
+        const matched: { stack: number; index: number; node: FlattenedNode }[] = [];
+        for (let s = 0; s < this.flatData.length; s++) {
+            for (let i = 0; i < this.flatData[s].length; i++) {
+                const node = this.flatData[s][i];
+                if (node.val.toLowerCase().includes(keyword.toLowerCase())) {
+                    matched.push({ stack: s, index: i, node });
+                }
+            }
+        }
+        if (matched.length === 0) return;
+
+        // 构建下拉菜单
+        const dropdown = document.createElement('div');
+        dropdown.className = 'absolute top-8 left-0 right-0 z-50 bg-base-100 border rounded shadow-lg max-h-48 overflow-y-auto';
+        const ul = document.createElement('ul');
+        ul.className = 'menu menu-xs p-0';
+        matched.forEach(m => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.textContent = m.node.val;
+            a.addEventListener('click', () => {
+                this.navigateToNode(m.stack, m.index);
+                dropdown.remove();
+                this.searchDropdown = null;
+            });
+            li.appendChild(a);
+            ul.appendChild(li);
+        });
+        dropdown.appendChild(ul);
+        this.container.appendChild(dropdown);
+        this.searchDropdown = dropdown;
+    }
+
+    /** 导航到指定节点：展开所有祖先，滚动到该节点，不改变选中 */
+    private navigateToNode(stackLevel: number, index: number) {
+        const targetFlat = this.flatData[stackLevel]?.[index];
+        if (!targetFlat) return;
+
+        // 设置展开路径
+        this.expandedParents = targetFlat.parentNodes.map(p => String(p));
+        // 并在当前层展开目标节点的父级（如果目标在更深层，需要先展开到当前层）
+        // 刷新UI
+        this.refreshAllStacks();
+
+        // 滚动到该节点
+        const stackDiv = this.stacks[stackLevel];
+        if (stackDiv) {
+            const target = stackDiv.querySelector(`[data-index="${index}"]`) as HTMLElement;
+            if (target) {
+                target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                target.classList.add('!bg-yellow-100');
+                setTimeout(() => target.classList.remove('!bg-yellow-100'), 1500);
+            }
+        }
+    }
+
+    // ---------- 公共接口 ----------
+    public getValue(): TreeNode[] { return [...this.selectedNodes]; }
+
     public setValue(keys: (string | number)[]) {
         const newSelected: TreeNode[] = [];
         for (const key of keys) {
@@ -461,7 +540,7 @@ export class CascadeSelector {
         }
         this.selectedNodes = newSelected;
 
-        // 根据第一个选中节点展开路径
+        // 根据第一个选中节点展开全路径
         this.expandedParents = [];
         if (newSelected.length > 0) {
             const firstNode = newSelected[0];
@@ -473,6 +552,10 @@ export class CascadeSelector {
             if (targetFlat) {
                 for (let i = 0; i < targetFlat.parentNodes.length; i++) {
                     this.expandedParents[i] = String(targetFlat.parentNodes[i]);
+                }
+                // 如果目标有子节点，也展开目标本身
+                if (targetFlat.nodes && targetFlat.nodes.length) {
+                    this.expandedParents[targetFlat.stack] = String(firstNode.key);
                 }
             }
         }
@@ -491,82 +574,6 @@ export class CascadeSelector {
         }
         return null;
     }
-
-    // ---------- 搜索 ----------
-    private handleSearch(keyword: string) {
-        if (!keyword.trim()) {
-            this.clearSearchResults();
-            return;
-        }
-        this.searchResults = [];
-        for (let s = 0; s < this.flatData.length; s++) {
-            for (let i = 0; i < this.flatData[s].length; i++) {
-                if (this.flatData[s][i].val.toLowerCase().includes(keyword.toLowerCase())) {
-                    this.searchResults.push({ stack: s, index: i });
-                }
-            }
-        }
-        if (this.searchResults.length === 0) return;
-        this.currentSearchIndex = 0;
-        this.showSearchPanel();
-        this.jumpToSearchResult(0);
-    }
-
-    private showSearchPanel() {
-        if (this.searchResultPanel) this.searchResultPanel.remove();
-        const panel = document.createElement('div');
-        panel.className = 'absolute top-9 right-2 bg-base-100 border rounded p-1 flex gap-1 shadow z-10';
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'btn btn-xs btn-outline';
-        prevBtn.textContent = '◀';
-        prevBtn.addEventListener('click', () => this.navigateSearch(-1));
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'btn btn-xs btn-outline';
-        nextBtn.textContent = '▶';
-        nextBtn.addEventListener('click', () => this.navigateSearch(1));
-        const counter = document.createElement('span');
-        counter.className = 'text-xs leading-relaxed px-1';
-        counter.textContent = `1/${this.searchResults.length}`;
-        panel.appendChild(prevBtn);
-        panel.appendChild(counter);
-        panel.appendChild(nextBtn);
-        this.container.appendChild(panel);
-        this.searchResultPanel = panel;
-    }
-
-    private navigateSearch(delta: number) {
-        let newIndex = this.currentSearchIndex + delta;
-        if (newIndex < 0) newIndex = this.searchResults.length - 1;
-        if (newIndex >= this.searchResults.length) newIndex = 0;
-        this.currentSearchIndex = newIndex;
-        const counter = this.searchResultPanel?.querySelector('span');
-        if (counter) counter.textContent = `${newIndex + 1}/${this.searchResults.length}`;
-        this.jumpToSearchResult(newIndex);
-    }
-
-    private jumpToSearchResult(index: number) {
-        const result = this.searchResults[index];
-        if (!result) return;
-        const stackDiv = this.stacks[result.stack];
-        if (!stackDiv) return;
-        const targetNode = stackDiv.querySelector(`[data-index="${result.index}"]`) as HTMLElement;
-        if (targetNode) {
-            targetNode.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            targetNode.classList.add('!bg-yellow-100');
-            setTimeout(() => targetNode.classList.remove('!bg-yellow-100'), 1000);
-            targetNode.click();
-        }
-    }
-
-    private clearSearchResults() {
-        if (this.searchResultPanel) {
-            this.searchResultPanel.remove();
-            this.searchResultPanel = null;
-        }
-        this.searchResults = [];
-    }
-
-    public getValue(): TreeNode[] { return [...this.selectedNodes]; }
 }
 
 export type { CascadeTreeOptions } from './tree';
