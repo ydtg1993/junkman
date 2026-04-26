@@ -18,6 +18,9 @@ export class CascadeSelector {
     protected searchDebounceTimer: number | null = null;
     protected uniqueId: string;
 
+    // 记录当前每个栈的展开父节点 key
+    private expandedParents: (string | number | undefined)[] = [];
+
     constructor(selector: string | HTMLElement, data: TreeNode[], options: CascadeOptions = {}) {
         this.container = typeof selector === 'string' ? document.querySelector(selector) as HTMLElement : selector;
         if (!this.container) throw new Error('Container element not found');
@@ -46,9 +49,8 @@ export class CascadeSelector {
 
     private render() {
         this.container.innerHTML = '';
-        this.container.className = 'flex flex-col gap-2';
+        this.container.className = 'flex flex-col gap-2 bg-base-100 p-2 rounded-lg border border-base-300';
 
-        // 搜索框
         if (this.options.searchable) {
             const input = document.createElement('input');
             input.type = 'text';
@@ -58,21 +60,19 @@ export class CascadeSelector {
             this.searchInput = input;
         }
 
-        // 已选标签区域
         const selectedArea = document.createElement('div');
-        selectedArea.className = 'flex flex-wrap gap-1 min-h-[34px] p-2 border border-base-300 rounded text-gray-500';
+        selectedArea.className = 'flex flex-wrap gap-1 min-h-[34px] p-2 border border-base-300 rounded text-base-content/60';
         selectedArea.textContent = this.options.placeholder;
         this.container.appendChild(selectedArea);
 
-        // 多列容器
         const columnsContainer = document.createElement('div');
-        columnsContainer.className = 'flex overflow-x-auto h-48';
+        columnsContainer.className = 'flex overflow-x-auto h-60 gap-1';
         this.container.appendChild(columnsContainer);
 
-        // 每一列
+        this.stacks = [];
         for (let i = 0; i < this.flatData.length; i++) {
             const stackDiv = document.createElement('div');
-            stackDiv.className = 'flex-1 min-w-[120px] border-r border-base-300 overflow-y-auto last:border-r-0';
+            stackDiv.className = 'flex-1 min-w-[130px] overflow-y-auto border-r border-base-200 last:border-r-0';
             stackDiv.setAttribute('data-stack', i.toString());
             columnsContainer.appendChild(stackDiv);
             this.stacks.push(stackDiv);
@@ -85,63 +85,109 @@ export class CascadeSelector {
         if (!stackDiv) return;
         stackDiv.innerHTML = '';
         const nodes = this.flatData[stackLevel];
+        if (!nodes || nodes.length === 0) return;
+
+        const ul = document.createElement('ul');
+        ul.className = 'menu menu-xs p-0 bg-base-100 rounded-lg w-full';
+
         for (let idx = 0; idx < nodes.length; idx++) {
             const node = nodes[idx];
-            const nodeDiv = document.createElement('div');
-            nodeDiv.className = 'flex items-center px-2 py-1.5 cursor-pointer border-b border-base-200 hover:bg-base-200';
-            nodeDiv.setAttribute('data-key', String(node.key));
-            nodeDiv.setAttribute('data-stack', String(stackLevel));
-            nodeDiv.setAttribute('data-index', String(idx));
+            const li = document.createElement('li');
+            // 非第一级默认隐藏，后续通过展开显示
+            if (stackLevel > 0) li.classList.add('hidden');
 
-            // 文本
-            const textSpan = document.createElement('span');
-            textSpan.className = 'flex-1 truncate';
-            textSpan.textContent = node.val;
-            nodeDiv.appendChild(textSpan);
-
-            // 有子节点则添加展开图标
-            if (node.nodes && node.nodes.length) {
-                const expandIcon = document.createElement('i');
-                expandIcon.className = 'inline-block mr-1 transition-transform';
-                expandIcon.innerHTML = Icon.caret_right;
-                nodeDiv.prepend(expandIcon);
-            }
-
-            // 选中标记
+            const hasChildren = node.nodes && node.nodes.length > 0;
             const isSelected = this.selectedNodes.some(n => n.key === node.key);
-            if (isSelected) {
-                nodeDiv.classList.add('bg-green-100', 'border-green-300');
-                const checkIcon = document.createElement('i');
-                checkIcon.innerHTML = Icon.check;
-                checkIcon.className = 'ml-1 text-success';
-                nodeDiv.appendChild(checkIcon);
+            // 部分选中：后代有节点被选中但本节点未全选
+            const partialSelected = !isSelected && hasChildren && this.hasAnySelectedDescendant(node);
+
+            const a = document.createElement('a');
+            let aClass = 'flex items-center justify-between py-1.5 px-2 hover:bg-base-200 cursor-pointer rounded';
+            if (isSelected) aClass += ' bg-success/10';
+            a.className = aClass;
+            a.setAttribute('data-key', String(node.key));
+            a.setAttribute('data-stack', String(stackLevel));
+            a.setAttribute('data-index', String(idx));
+            a.setAttribute('data-has-children', hasChildren ? 'true' : 'false');
+
+            const left = document.createElement('span');
+            left.className = 'flex items-center gap-1';
+
+            if (hasChildren) {
+                const expandIcon = document.createElement('span');
+                expandIcon.className = 'expand-icon transition-transform duration-200';
+                expandIcon.innerHTML = Icon.caret_right;
+                // 根据当前展开路径决定是否旋转
+                if (this.expandedParents[stackLevel] === node.key) {
+                    expandIcon.style.transform = 'rotate(90deg)';
+                }
+                left.appendChild(expandIcon);
             }
 
-            stackDiv.appendChild(nodeDiv);
+            const textSpan = document.createElement('span');
+            textSpan.className = 'truncate';
+            textSpan.textContent = node.val;
+            left.appendChild(textSpan);
+            a.appendChild(left);
+
+            // 状态标记
+            if (isSelected || partialSelected) {
+                const mark = document.createElement('span');
+                mark.className = isSelected ? 'text-success' : 'text-warning';
+                mark.innerHTML = isSelected ? Icon.check : Icon.check_circle;
+                a.appendChild(mark);
+            }
+
+            li.appendChild(a);
+            ul.appendChild(li);
         }
+        stackDiv.appendChild(ul);
+    }
+
+    /** 判断某个节点是否有任意后代被选中 */
+    private hasAnySelectedDescendant(node: FlattenedNode): boolean {
+        const check = (n: TreeNode): boolean => {
+            if (this.selectedNodes.some(s => s.key === n.key)) return true;
+            if (n.nodes) {
+                for (const child of n.nodes) {
+                    if (check(child)) return true;
+                }
+            }
+            return false;
+        };
+        if (!node.nodes) return false;
+        for (const child of node.nodes) {
+            if (check(child)) return true;
+        }
+        return false;
     }
 
     protected refreshAllStacks() {
+        const oldExpanded = [...this.expandedParents];
         for (let i = 0; i < this.flatData.length; i++) {
             this.renderStack(i);
         }
         this.updateSelectedArea();
-        this.highlightPath();
+        // 重新应用展开状态到下一列
+        for (let level = 0; level < oldExpanded.length; level++) {
+            const parentKey = oldExpanded[level];
+            if (parentKey !== undefined) {
+                const parentNode = this.flatData[level]?.find(n => n.key === parentKey);
+                if (parentNode) {
+                    this.applyExpand(level, parentNode);
+                }
+            }
+        }
     }
 
     private updateSelectedArea() {
-        const selectedArea = this.container.querySelector('.flex-wrap') as HTMLElement;
+        const selectedArea = this.container.children[1] as HTMLElement;
         if (!selectedArea) return;
         if (this.selectedNodes.length === 0) {
             selectedArea.textContent = this.options.placeholder;
-            selectedArea.classList.remove('flex');
-            selectedArea.classList.add('block');
             return;
         }
-        selectedArea.classList.add('flex');
-        selectedArea.classList.remove('block');
         if (this.options.limit === 1) {
-            selectedArea.innerHTML = '';
             selectedArea.textContent = this.selectedNodes[0].val;
             return;
         }
@@ -162,79 +208,36 @@ export class CascadeSelector {
         }
     }
 
-    private highlightPath() {
-        if (this.selectedNodes.length === 0) return;
-        const lastSelected = this.selectedNodes[this.selectedNodes.length - 1];
-        const findNodePath = (key: string | number, stackLevel: number = 0): FlattenedNode | null => {
-            for (const node of this.flatData[stackLevel] || []) {
-                if (node.key === key) return node;
-            }
-            return null;
-        };
-
-        // 清除所有状态
-        for (const stackDiv of this.stacks) {
-            for (const child of Array.from(stackDiv.children)) {
-                child.classList.remove('bg-blue-100', 'font-semibold');
-                const icon = child.querySelector('i:first-child');
-                if (icon) icon.classList.remove('rotate-90');
-            }
-        }
-
-        let currentKey = lastSelected.key;
-        for (let level = this.flatData.length - 1; level >= 0; level--) {
-            const nodeInfo = findNodePath(currentKey, level);
-            if (!nodeInfo) continue;
-            const stackDiv = this.stacks[level];
-            const targetNode = stackDiv.querySelector(`[data-key="${currentKey}"]`) as HTMLElement;
-            if (targetNode) {
-                targetNode.classList.add('bg-blue-100', 'font-semibold');
-                if (level > 0) {
-                    const parentKey = nodeInfo.parentNodes[nodeInfo.parentNodes.length - 1];
-                    const parentNode = (stackDiv.parentElement as HTMLElement)?.querySelector(`[data-key="${parentKey}"]`) as HTMLElement;
-                    if (parentNode) {
-                        const icon = parentNode.querySelector('i:first-child');
-                        if (icon) icon.classList.add('rotate-90');
-                    }
-                }
-            }
-            currentKey = nodeInfo.parentNodes[nodeInfo.parentNodes.length - 1];
-            if (!currentKey) break;
-        }
-    }
-
     private bindEvents() {
-        const columnsContainer = this.container.lastChild as HTMLElement; // 最后一个子元素是多列容器
+        const columnsContainer = this.container.lastChild as HTMLElement;
         if (!columnsContainer) return;
 
-        // 节点点击
         columnsContainer.addEventListener('click', (e) => {
-            const nodeDiv = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
-            if (!nodeDiv) return;
-            const key = nodeDiv.getAttribute('data-key')!;
-            const stackLevel = parseInt(nodeDiv.getAttribute('data-stack') || '0');
+            const a = (e.target as HTMLElement).closest('a[data-key]') as HTMLElement;
+            if (!a) return;
+            const hasChildren = a.getAttribute('data-has-children') === 'true';
+            const key = a.getAttribute('data-key')!;
+            const stackLevel = parseInt(a.getAttribute('data-stack') || '0');
             const nodeData = this.flatData[stackLevel]?.find(n => String(n.key) === key);
             if (!nodeData) return;
 
-            if (nodeData.nodes && nodeData.nodes.length) {
-                const icon = nodeDiv.querySelector('i:first-child');
-                const isExpanded = icon?.classList.toggle('rotate-90');
-                if (isExpanded) {
-                    this.expandToNextLevel(stackLevel, nodeData);
+            if (hasChildren) {
+                // 父节点：切换展开/收缩
+                if (this.expandedParents[stackLevel] === nodeData.key) {
+                    this.collapseFromLevel(stackLevel);
                 } else {
-                    this.collapseFromLevel(stackLevel + 1);
+                    this.expandToNextLevel(stackLevel, nodeData);
                 }
             } else {
+                // 叶子节点：选中/取消
                 if (this.isSelected(nodeData.key)) {
                     this.removeSelected(nodeData.key);
                 } else {
                     this.addSelected(nodeData);
                 }
             }
-            e.stopPropagation();
         });
 
-        // 搜索
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => {
                 if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
@@ -244,28 +247,28 @@ export class CascadeSelector {
             });
         }
 
-        // 右键菜单
         columnsContainer.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            const nodeDiv = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
-            if (!nodeDiv) return;
-            const key = nodeDiv.getAttribute('data-key')!;
-            const stackLevel = parseInt(nodeDiv.getAttribute('data-stack') || '0');
+            const a = (e.target as HTMLElement).closest('a[data-key]') as HTMLElement;
+            if (!a) return;
+            const key = a.getAttribute('data-key')!;
+            const stackLevel = parseInt(a.getAttribute('data-stack') || '0');
             const nodeData = this.flatData[stackLevel]?.find(n => String(n.key) === key);
-            if (!nodeData) return;
-            const hasChildren = nodeData.nodes && nodeData.nodes.length;
-            const menuItems: ContextMenuItem[] = [];
-            if (hasChildren) {
-                menuItems.push({ title: '全选子级', func: () => this.selectAllChildren(nodeData) });
-                menuItems.push({ title: '取消全选', func: () => this.deselectAllChildren(nodeData) });
-            }
-            if (menuItems.length) {
-                contextmenu([this.container], menuItems);
-            }
+            if (!nodeData || !nodeData.nodes || nodeData.nodes.length === 0) return;
+
+            contextmenu([this.container], [
+                { title: '全选子级', func: () => this.selectAllChildren(nodeData) },
+                { title: '取消全选', func: () => this.deselectAllChildren(nodeData) },
+            ]);
         });
     }
 
     private expandToNextLevel(currentLevel: number, parentNode: FlattenedNode) {
+        // 记录当前展开的父节点
+        this.expandedParents[currentLevel] = parentNode.key;
+        // 清除所有更深层次的展开状态
+        this.expandedParents.length = currentLevel + 1;
+
         const nextLevel = currentLevel + 1;
         if (nextLevel >= this.flatData.length) {
             const childrenNodes = parentNode.originalNode.nodes;
@@ -275,25 +278,114 @@ export class CascadeSelector {
             }
             return;
         }
-        const nextStackDiv = this.stacks[nextLevel];
-        if (!nextStackDiv) return;
-        const childrenKeys = parentNode.nodes?.map(n => n.key) || [];
-        const allNodes = nextStackDiv.querySelectorAll('[data-key]');
-        allNodes.forEach(node => {
-            const key = node.getAttribute('data-key')!;
-            (node as HTMLElement).classList.toggle('hidden', !childrenKeys.includes(key));
-        });
-        const firstVisible = nextStackDiv.querySelector('[data-key]:not(.hidden)') as HTMLElement;
-        if (firstVisible) firstVisible.scrollIntoView({ block: 'nearest' });
+
+        this.applyExpand(currentLevel, parentNode);
+        // 灰显当前列中不属于该路径的节点
+        this.applyPathHighlight(currentLevel, parentNode);
     }
 
-    protected collapseFromLevel(level: number) {
+    private applyExpand(currentLevel: number, parentNode: FlattenedNode) {
+        const nextLevel = currentLevel + 1;
+        if (nextLevel >= this.stacks.length) return;
+
+        const nextStackDiv = this.stacks[nextLevel];
+        if (!nextStackDiv) return;
+
+        // 🔧 修复：将 childrenKeys 转为字符串数组进行比较
+        const childrenKeys = (parentNode.nodes?.map(n => String(n.key)) || []) as string[];
+        const allLi = nextStackDiv.querySelectorAll('li');
+
+        allLi.forEach(li => li.classList.add('hidden'));
+
+        allLi.forEach(li => {
+            const el = li.querySelector('[data-key]') as HTMLElement;
+            if (el && childrenKeys.includes(el.getAttribute('data-key')!)) {
+                li.classList.remove('hidden');
+            }
+        });
+
+        // 关闭更深层级
+        this.collapseDeeperLevels(nextLevel);
+
+        // 滚动到第一个可见子节点
+        const firstVisible = nextStackDiv.querySelector('li:not(.hidden)');
+        if (firstVisible) {
+            firstVisible.scrollIntoView({ block: 'nearest' });
+        }
+
+        this.updateExpandIcons(currentLevel);
+    }
+
+    /** 灰显当前列中不属于路径的节点 */
+    private applyPathHighlight(stackLevel: number, parentNode: FlattenedNode) {
+        const stackDiv = this.stacks[stackLevel];
+        if (!stackDiv) return;
+        const allA = stackDiv.querySelectorAll('a[data-key]');
+        allA.forEach(a => {
+            const key = a.getAttribute('data-key')!;
+            if (key === String(parentNode.key)) {
+                a.classList.remove('opacity-40');
+            } else {
+                a.classList.add('opacity-40');
+            }
+        });
+    }
+
+    private collapseFromLevel(level: number) {
+        // 清除展开标记
+        this.expandedParents.length = level;
         for (let i = level; i < this.stacks.length; i++) {
             const stackDiv = this.stacks[i];
             if (stackDiv) {
-                const nodes = stackDiv.querySelectorAll('[data-key]');
-                nodes.forEach(node => (node as HTMLElement).classList.add('hidden'));
+                const allLi = stackDiv.querySelectorAll('li');
+                allLi.forEach(li => li.classList.add('hidden'));
             }
+        }
+        // 恢复灰显状态
+        if (level > 0) {
+            const parentLevel = level - 1;
+            const parentKey = this.expandedParents[parentLevel];
+            if (parentKey !== undefined) {
+                const parentNode = this.flatData[parentLevel]?.find(n => n.key === parentKey);
+                if (parentNode) this.applyPathHighlight(parentLevel, parentNode);
+            } else {
+                // 父级没有展开，清除所有路径高亮
+                const stackDiv = this.stacks[parentLevel];
+                if (stackDiv) {
+                    const allA = stackDiv.querySelectorAll('a[data-key]');
+                    allA.forEach(a => a.classList.remove('opacity-40'));
+                }
+            }
+        }
+        this.updateExpandIcons(level);
+    }
+
+    private collapseDeeperLevels(fromLevel: number) {
+        for (let i = fromLevel + 1; i < this.stacks.length; i++) {
+            const stackDiv = this.stacks[i];
+            if (stackDiv) {
+                const allLi = stackDiv.querySelectorAll('li');
+                allLi.forEach(li => li.classList.add('hidden'));
+            }
+        }
+    }
+
+    private updateExpandIcons(stackLevel: number) {
+        for (let level = 0; level < this.stacks.length; level++) {
+            const stackDiv = this.stacks[level];
+            if (!stackDiv) continue;
+            const allA = stackDiv.querySelectorAll('a[data-has-children="true"]');
+            allA.forEach(a => {
+                const key = a.getAttribute('data-key')!;
+                const icon = a.querySelector('.expand-icon') as HTMLElement;
+                if (icon) {
+                    if (this.expandedParents[level] === String(key) || this.expandedParents[level] === Number(key)) {
+                        icon.style.transform = 'rotate(90deg)';
+                    } else {
+                        icon.style.transform = '';
+                    }
+                }
+            });
         }
     }
 
@@ -304,38 +396,113 @@ export class CascadeSelector {
         this.stacks = [];
         for (let i = 0; i < this.flatData.length; i++) {
             const stackDiv = document.createElement('div');
-            stackDiv.className = 'flex-1 min-w-[120px] border-r border-base-300 overflow-y-auto last:border-r-0';
+            stackDiv.className = 'flex-1 min-w-[130px] overflow-y-auto border-r border-base-200 last:border-r-0';
             stackDiv.setAttribute('data-stack', i.toString());
             columnsContainer.appendChild(stackDiv);
             this.stacks.push(stackDiv);
             this.renderStack(i);
         }
+        // 重新应用所有展开状态
+        for (let level = 0; level < this.expandedParents.length; level++) {
+            const parentKey = this.expandedParents[level];
+            if (parentKey !== undefined) {
+                const parentNode = this.flatData[level]?.find(n => n.key === parentKey);
+                if (parentNode) {
+                    this.applyExpand(level, parentNode);
+                }
+            }
+        }
     }
 
+    // ---------- 选中逻辑 ----------
+    private addSelected(node: FlattenedNode) {
+        if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) {
+            this.removeSelected(this.selectedNodes[0].key);
+        }
+        if (!this.isSelected(node.key)) {
+            this.selectedNodes.push(node.originalNode);
+            this.refreshAllStacks();
+            this.options.onChange(this.selectedNodes);
+        }
+    }
+
+    protected removeSelected(key: string | number) {
+        const index = this.selectedNodes.findIndex(n => n.key === key);
+        if (index !== -1) {
+            this.selectedNodes.splice(index, 1);
+            this.refreshAllStacks();
+            this.options.onChange(this.selectedNodes);
+        }
+    }
+
+    private isSelected(key: string | number): boolean {
+        return this.selectedNodes.some(n => n.key === key);
+    }
+
+    private selectAllChildren(parentNode: FlattenedNode) {
+        const collect = (node: TreeNode): TreeNode[] => {
+            let arr: TreeNode[] = [];
+            if (node.nodes) {
+                node.nodes.forEach(c => {
+                    arr.push(c);
+                    arr.push(...collect(c));
+                });
+            }
+            return arr;
+        };
+        const descendants = collect(parentNode.originalNode);
+        for (const node of descendants) {
+            if (!this.isSelected(node.key)) {
+                if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) break;
+                this.selectedNodes.push(node);
+            }
+        }
+        this.refreshAllStacks();
+        this.options.onChange(this.selectedNodes);
+    }
+
+    private deselectAllChildren(parentNode: FlattenedNode) {
+        const keys = this.getAllDescendantKeys(parentNode.originalNode);
+        this.selectedNodes = this.selectedNodes.filter(n => !keys.includes(n.key));
+        this.refreshAllStacks();
+        this.options.onChange(this.selectedNodes);
+    }
+
+    private getAllDescendantKeys(node: TreeNode): (string | number)[] {
+        let keys: (string | number)[] = [];
+        if (node.nodes) {
+            node.nodes.forEach(c => {
+                keys.push(c.key);
+                keys.push(...this.getAllDescendantKeys(c));
+            });
+        }
+        return keys;
+    }
+
+    // ---------- 搜索 ----------
     private handleSearch(keyword: string) {
         if (!keyword.trim()) {
             this.clearSearchResults();
             return;
         }
         this.searchResults = [];
-        for (let stack = 0; stack < this.flatData.length; stack++) {
-            for (let idx = 0; idx < this.flatData[stack].length; idx++) {
-                const node = this.flatData[stack][idx];
-                if (node.val.toLowerCase().includes(keyword.toLowerCase())) {
-                    this.searchResults.push({ stack, index: idx });
+        for (let s = 0; s < this.flatData.length; s++) {
+            for (let i = 0; i < this.flatData[s].length; i++) {
+                if (this.flatData[s][i].val.toLowerCase().includes(keyword.toLowerCase())) {
+                    this.searchResults.push({ stack: s, index: i });
                 }
             }
         }
         if (this.searchResults.length === 0) return;
         this.currentSearchIndex = 0;
-        this.showSearchResultPanel();
+        this.showSearchPanel();
         this.jumpToSearchResult(0);
     }
 
-    private showSearchResultPanel() {
+    private showSearchPanel() {
         if (this.searchResultPanel) this.searchResultPanel.remove();
         const panel = document.createElement('div');
-        panel.className = 'absolute top-9 right-2 bg-white border rounded p-1 flex gap-1 shadow z-10';
+        panel.className = 'absolute top-9 right-2 bg-base-100 border rounded p-1 flex gap-1 shadow z-10';
         const prevBtn = document.createElement('button');
         prevBtn.className = 'btn btn-xs btn-outline';
         prevBtn.textContent = '◀';
@@ -350,7 +517,7 @@ export class CascadeSelector {
         panel.appendChild(prevBtn);
         panel.appendChild(counter);
         panel.appendChild(nextBtn);
-        this.container.appendChild(panel); // 相对于容器定位，故放在 this.container 内
+        this.container.appendChild(panel);
         this.searchResultPanel = panel;
     }
 
@@ -386,82 +553,13 @@ export class CascadeSelector {
         this.searchResults = [];
     }
 
-    private addSelected(node: FlattenedNode) {
-        if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) {
-            this.removeSelected(this.selectedNodes[0].key);
-        }
-        if (!this.isSelected(node.key)) {
-            this.selectedNodes.push(node.originalNode);
-            this.refreshAllStacks();
-            this.options.onChange(this.selectedNodes);
-        }
-    }
-
-    protected removeSelected(key: string | number) {
-        const index = this.selectedNodes.findIndex(n => n.key === key);
-        if (index !== -1) {
-            this.selectedNodes.splice(index, 1);
-            this.refreshAllStacks();
-            this.options.onChange(this.selectedNodes);
-        }
-    }
-
-    private isSelected(key: string | number): boolean {
-        return this.selectedNodes.some(n => n.key === key);
-    }
-
-    private selectAllChildren(parentNode: FlattenedNode) {
-        const collectAllDescendants = (node: TreeNode): TreeNode[] => {
-            let result: TreeNode[] = [];
-            if (node.nodes) {
-                for (const child of node.nodes) {
-                    result.push(child);
-                    result.push(...collectAllDescendants(child));
-                }
-            }
-            return result;
-        };
-        const descendants = collectAllDescendants(parentNode.originalNode);
-        for (const node of descendants) {
-            if (!this.isSelected(node.key)) {
-                if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) break;
-                this.selectedNodes.push(node);
-            }
-        }
-        this.refreshAllStacks();
-        this.options.onChange(this.selectedNodes);
-    }
-
-    private deselectAllChildren(parentNode: FlattenedNode) {
-        const collectAllDescendantKeys = (node: TreeNode): (string | number)[] => {
-            let keys: (string | number)[] = [];
-            if (node.nodes) {
-                for (const child of node.nodes) {
-                    keys.push(child.key);
-                    keys.push(...collectAllDescendantKeys(child));
-                }
-            }
-            return keys;
-        };
-        const keysToRemove = collectAllDescendantKeys(parentNode.originalNode);
-        this.selectedNodes = this.selectedNodes.filter(n => !keysToRemove.includes(n.key));
-        this.refreshAllStacks();
-        this.options.onChange(this.selectedNodes);
-    }
-
-    public getValue(): TreeNode[] {
-        return [...this.selectedNodes];
-    }
+    public getValue(): TreeNode[] { return [...this.selectedNodes]; }
 
     public setValue(keys: (string | number)[]) {
         const newSelected: TreeNode[] = [];
         for (const key of keys) {
             const found = this.findNodeByKey(key);
             if (found) newSelected.push(found);
-        }
-        if (this.options.limit > 0 && newSelected.length > this.options.limit) {
-            console.warn(`超出限制数量 ${this.options.limit}，将截取前 ${this.options.limit} 个`);
-            newSelected.length = this.options.limit;
         }
         this.selectedNodes = newSelected;
         this.refreshAllStacks();
@@ -479,3 +577,5 @@ export class CascadeSelector {
         return null;
     }
 }
+
+export type { CascadeTreeOptions } from './tree';

@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+details[open] > summary > .expand-icon {
+    transform: rotate(90deg);
+}
+
+[data-has-children="true"] .expand-icon {
+    transition: transform 0.2s;
+}
