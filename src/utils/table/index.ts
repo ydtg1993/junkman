@@ -43,6 +43,7 @@ export interface TableOptions {
     updateUrl?: string;
     deleteUrl?: string;
     onDataChange?: (data: any[]) => void;
+    onSort?: (order: (string | number)[], originalData: any[]) => any[];
 }
 
 export class EditableTable {
@@ -70,6 +71,7 @@ export class EditableTable {
             updateUrl: options.updateUrl || '',
             deleteUrl: options.deleteUrl || '',
             onDataChange: options.onDataChange || (() => {}),
+            onSort: options.onSort || ((order, data) => data),
         };
         this.render();
     }
@@ -92,15 +94,36 @@ export class EditableTable {
             this.sortable = new Sortable(this.tbodyDom, {
                 handle: '[data-sort-handle]',
                 onSort: (order) => {
-                    const map = new Map();
+                    // 如果外部提供了 onSort，则交给外部处理，外部必须返回排序后的新数组
+                    if (this.options.onSort) {
+                        const newData = this.options.onSort(order, this.data);
+                        if (Array.isArray(newData)) {
+                            this.data = newData;
+                            this.triggerChange();
+                        } else {
+                            console.warn('onSort 回调必须返回排序后的数组');
+                        }
+                        return;
+                    }
 
+                    // 默认排序逻辑（基于 data-id 映射）
+                    const map = new Map();
                     this.data.forEach((row, index) => {
                         const id = row.id ?? index;
                         map.set(String(id), row);
                     });
 
-                    this.data = order.map(i => map.get(String(i)));
-                    this.triggerChange();
+                    // 过滤掉无法匹配的 id，防止 undefined 行
+                    const newData = order
+                        .map(id => map.get(String(id)))
+                        .filter(row => row !== undefined);
+
+                    if (newData.length === this.data.length) {
+                        this.data = newData;
+                        this.triggerChange();
+                    } else {
+                        console.error('排序失败：部分数据丢失，请检查 data-id 设置', order);
+                    }
                 }
             });
         }
@@ -148,7 +171,8 @@ export class EditableTable {
         const tr = document.createElement('tr');
         tr.setAttribute('data-sortable-item', 'true');
         if (this.options.hover) tr.classList.add('hover');
-
+        const rowId = rowData.id ?? index;
+        tr.setAttribute('data-id', String(rowId));
         for (const col of this.columns) {
             const td = document.createElement('td');
             td.style.padding = '0.25rem 0.5rem';
