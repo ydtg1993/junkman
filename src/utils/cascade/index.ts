@@ -18,7 +18,7 @@ export class CascadeSelector {
     protected searchDebounceTimer: number | null = null;
     protected uniqueId: string;
 
-    private expandedParents: (string | undefined)[] = []; // 统一使用字符串
+    private expandedParents: (string | undefined)[] = [];
 
     constructor(selector: string | HTMLElement, data: TreeNode[], options: CascadeOptions = {}) {
         this.container = typeof selector === 'string' ? document.querySelector(selector) as HTMLElement : selector;
@@ -209,13 +209,12 @@ export class CascadeSelector {
             const a = (e.target as HTMLElement).closest('a[data-key]') as HTMLElement;
             if (!a) return;
             const hasChildren = a.getAttribute('data-has-children') === 'true';
-            const domKey = a.getAttribute('data-key')!; // 字符串
+            const domKey = a.getAttribute('data-key')!;
             const stackLevel = parseInt(a.getAttribute('data-stack') || '0');
             const nodeData = this.flatData[stackLevel]?.find(n => String(n.key) === domKey);
             if (!nodeData) return;
 
             if (hasChildren) {
-                // 统一使用字符串比较
                 if (this.expandedParents[stackLevel] === domKey) {
                     this.collapseFromLevel(stackLevel);
                 } else {
@@ -322,7 +321,6 @@ export class CascadeSelector {
                 allLi.forEach(li => li.classList.add('hidden'));
             }
         }
-        // 移除当前列灰显
         if (level >= 0) {
             const stackDiv = this.stacks[level];
             if (stackDiv) {
@@ -450,6 +448,51 @@ export class CascadeSelector {
         return keys;
     }
 
+    // ---------- 修复的 setValue ----------
+    public setValue(keys: (string | number)[]) {
+        const newSelected: TreeNode[] = [];
+        for (const key of keys) {
+            const found = this.findNodeByKey(key);
+            if (found) newSelected.push(found);
+        }
+        if (this.options.limit > 0 && newSelected.length > this.options.limit) {
+            console.warn(`超出限制数量 ${this.options.limit}，将截取前 ${this.options.limit} 个`);
+            newSelected.length = this.options.limit;
+        }
+        this.selectedNodes = newSelected;
+
+        // 根据第一个选中节点展开路径
+        this.expandedParents = [];
+        if (newSelected.length > 0) {
+            const firstNode = newSelected[0];
+            let targetFlat: FlattenedNode | undefined;
+            for (const levelData of this.flatData) {
+                targetFlat = levelData.find(n => n.key === firstNode.key);
+                if (targetFlat) break;
+            }
+            if (targetFlat) {
+                for (let i = 0; i < targetFlat.parentNodes.length; i++) {
+                    this.expandedParents[i] = String(targetFlat.parentNodes[i]);
+                }
+            }
+        }
+
+        this.refreshAllStacks();
+        this.options.onChange(this.selectedNodes);
+    }
+
+    protected findNodeByKey(key: string | number, nodes: TreeNode[] = this.data): TreeNode | null {
+        for (const node of nodes) {
+            if (node.key === key) return node;
+            if (node.nodes) {
+                const found = this.findNodeByKey(key, node.nodes);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    // ---------- 搜索 ----------
     private handleSearch(keyword: string) {
         if (!keyword.trim()) {
             this.clearSearchResults();
@@ -524,28 +567,6 @@ export class CascadeSelector {
     }
 
     public getValue(): TreeNode[] { return [...this.selectedNodes]; }
-
-    public setValue(keys: (string | number)[]) {
-        const newSelected: TreeNode[] = [];
-        for (const key of keys) {
-            const found = this.findNodeByKey(key);
-            if (found) newSelected.push(found);
-        }
-        this.selectedNodes = newSelected;
-        this.refreshAllStacks();
-        this.options.onChange(this.selectedNodes);
-    }
-
-    protected findNodeByKey(key: string | number, nodes: TreeNode[] = this.data): TreeNode | null {
-        for (const node of nodes) {
-            if (node.key === key) return node;
-            if (node.nodes) {
-                const found = this.findNodeByKey(key, node.nodes);
-                if (found) return found;
-            }
-        }
-        return null;
-    }
 }
 
 export type { CascadeTreeOptions } from './tree';
