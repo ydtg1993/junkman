@@ -250,24 +250,9 @@ export class Sortable {
         // 恢复原元素可见性
         this.dragItem.style.display = '';
 
-        // 获取旧位置
-        const oldRect = this.dragItem.getBoundingClientRect();
-
         // 将真实元素移动到 placeholder 位置
         this.list.insertBefore(this.dragItem, this.placeholder);
         this.placeholder.remove();
-
-        const newRect = this.dragItem.getBoundingClientRect();
-
-        // FLIP 动画
-        const dx = oldRect.left - newRect.left;
-        const dy = oldRect.top - newRect.top;
-        this.dragItem.style.transition = 'none';
-        this.dragItem.style.transform = `translate(${dx}px, ${dy}px)`;
-        requestAnimationFrame(() => {
-            this.dragItem!.style.transition = `transform ${this.options.animationSpeed}ms ease`;
-            this.dragItem!.style.transform = '';
-        });
 
         // 清理样式并触发回调
         setTimeout(() => {
