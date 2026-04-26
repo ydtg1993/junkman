@@ -18,8 +18,7 @@ export class CascadeSelector {
     protected searchDebounceTimer: number | null = null;
     protected uniqueId: string;
 
-    // 记录当前每个栈的展开父节点 key
-    private expandedParents: (string | number | undefined)[] = [];
+    private expandedParents: (string | undefined)[] = []; // 统一使用字符串
 
     constructor(selector: string | HTMLElement, data: TreeNode[], options: CascadeOptions = {}) {
         this.container = typeof selector === 'string' ? document.querySelector(selector) as HTMLElement : selector;
@@ -93,12 +92,10 @@ export class CascadeSelector {
         for (let idx = 0; idx < nodes.length; idx++) {
             const node = nodes[idx];
             const li = document.createElement('li');
-            // 非第一级默认隐藏，后续通过展开显示
             if (stackLevel > 0) li.classList.add('hidden');
 
             const hasChildren = node.nodes && node.nodes.length > 0;
             const isSelected = this.selectedNodes.some(n => n.key === node.key);
-            // 部分选中：后代有节点被选中但本节点未全选
             const partialSelected = !isSelected && hasChildren && this.hasAnySelectedDescendant(node);
 
             const a = document.createElement('a');
@@ -117,8 +114,7 @@ export class CascadeSelector {
                 const expandIcon = document.createElement('span');
                 expandIcon.className = 'expand-icon transition-transform duration-200';
                 expandIcon.innerHTML = Icon.caret_right;
-                // 根据当前展开路径决定是否旋转
-                if (this.expandedParents[stackLevel] === node.key) {
+                if (String(this.expandedParents[stackLevel]) === String(node.key)) {
                     expandIcon.style.transform = 'rotate(90deg)';
                 }
                 left.appendChild(expandIcon);
@@ -130,7 +126,6 @@ export class CascadeSelector {
             left.appendChild(textSpan);
             a.appendChild(left);
 
-            // 状态标记
             if (isSelected || partialSelected) {
                 const mark = document.createElement('span');
                 mark.className = isSelected ? 'text-success' : 'text-warning';
@@ -144,7 +139,6 @@ export class CascadeSelector {
         stackDiv.appendChild(ul);
     }
 
-    /** 判断某个节点是否有任意后代被选中 */
     private hasAnySelectedDescendant(node: FlattenedNode): boolean {
         const check = (n: TreeNode): boolean => {
             if (this.selectedNodes.some(s => s.key === n.key)) return true;
@@ -168,13 +162,12 @@ export class CascadeSelector {
             this.renderStack(i);
         }
         this.updateSelectedArea();
-        // 重新应用展开状态到下一列
         for (let level = 0; level < oldExpanded.length; level++) {
             const parentKey = oldExpanded[level];
             if (parentKey !== undefined) {
-                const parentNode = this.flatData[level]?.find(n => n.key === parentKey);
-                if (parentNode) {
-                    this.applyExpand(level, parentNode);
+                const nodeData = this.flatData[level]?.find(n => String(n.key) === parentKey);
+                if (nodeData) {
+                    this.applyExpand(level, nodeData);
                 }
             }
         }
@@ -216,20 +209,19 @@ export class CascadeSelector {
             const a = (e.target as HTMLElement).closest('a[data-key]') as HTMLElement;
             if (!a) return;
             const hasChildren = a.getAttribute('data-has-children') === 'true';
-            const key = a.getAttribute('data-key')!;
+            const domKey = a.getAttribute('data-key')!; // 字符串
             const stackLevel = parseInt(a.getAttribute('data-stack') || '0');
-            const nodeData = this.flatData[stackLevel]?.find(n => String(n.key) === key);
+            const nodeData = this.flatData[stackLevel]?.find(n => String(n.key) === domKey);
             if (!nodeData) return;
 
             if (hasChildren) {
-                // 父节点：切换展开/收缩
-                if (this.expandedParents[stackLevel] === nodeData.key) {
+                // 统一使用字符串比较
+                if (this.expandedParents[stackLevel] === domKey) {
                     this.collapseFromLevel(stackLevel);
                 } else {
                     this.expandToNextLevel(stackLevel, nodeData);
                 }
             } else {
-                // 叶子节点：选中/取消
                 if (this.isSelected(nodeData.key)) {
                     this.removeSelected(nodeData.key);
                 } else {
@@ -264,9 +256,7 @@ export class CascadeSelector {
     }
 
     private expandToNextLevel(currentLevel: number, parentNode: FlattenedNode) {
-        // 记录当前展开的父节点
-        this.expandedParents[currentLevel] = parentNode.key;
-        // 清除所有更深层次的展开状态
+        this.expandedParents[currentLevel] = String(parentNode.key);
         this.expandedParents.length = currentLevel + 1;
 
         const nextLevel = currentLevel + 1;
@@ -278,23 +268,18 @@ export class CascadeSelector {
             }
             return;
         }
-
         this.applyExpand(currentLevel, parentNode);
-        // 灰显当前列中不属于该路径的节点
         this.applyPathHighlight(currentLevel, parentNode);
     }
 
     private applyExpand(currentLevel: number, parentNode: FlattenedNode) {
         const nextLevel = currentLevel + 1;
         if (nextLevel >= this.stacks.length) return;
-
         const nextStackDiv = this.stacks[nextLevel];
         if (!nextStackDiv) return;
 
-        // 🔧 修复：将 childrenKeys 转为字符串数组进行比较
         const childrenKeys = (parentNode.nodes?.map(n => String(n.key)) || []) as string[];
         const allLi = nextStackDiv.querySelectorAll('li');
-
         allLi.forEach(li => li.classList.add('hidden'));
 
         allLi.forEach(li => {
@@ -304,10 +289,8 @@ export class CascadeSelector {
             }
         });
 
-        // 关闭更深层级
         this.collapseDeeperLevels(nextLevel);
 
-        // 滚动到第一个可见子节点
         const firstVisible = nextStackDiv.querySelector('li:not(.hidden)');
         if (firstVisible) {
             firstVisible.scrollIntoView({ block: 'nearest' });
@@ -316,7 +299,6 @@ export class CascadeSelector {
         this.updateExpandIcons(currentLevel);
     }
 
-    /** 灰显当前列中不属于路径的节点 */
     private applyPathHighlight(stackLevel: number, parentNode: FlattenedNode) {
         const stackDiv = this.stacks[stackLevel];
         if (!stackDiv) return;
@@ -332,29 +314,20 @@ export class CascadeSelector {
     }
 
     private collapseFromLevel(level: number) {
-        // 清除展开标记
         this.expandedParents.length = level;
-        for (let i = level; i < this.stacks.length; i++) {
+        for (let i = level + 1; i < this.stacks.length; i++) {
             const stackDiv = this.stacks[i];
             if (stackDiv) {
                 const allLi = stackDiv.querySelectorAll('li');
                 allLi.forEach(li => li.classList.add('hidden'));
             }
         }
-        // 恢复灰显状态
-        if (level > 0) {
-            const parentLevel = level - 1;
-            const parentKey = this.expandedParents[parentLevel];
-            if (parentKey !== undefined) {
-                const parentNode = this.flatData[parentLevel]?.find(n => n.key === parentKey);
-                if (parentNode) this.applyPathHighlight(parentLevel, parentNode);
-            } else {
-                // 父级没有展开，清除所有路径高亮
-                const stackDiv = this.stacks[parentLevel];
-                if (stackDiv) {
-                    const allA = stackDiv.querySelectorAll('a[data-key]');
-                    allA.forEach(a => a.classList.remove('opacity-40'));
-                }
+        // 移除当前列灰显
+        if (level >= 0) {
+            const stackDiv = this.stacks[level];
+            if (stackDiv) {
+                const allA = stackDiv.querySelectorAll('a[data-key]');
+                allA.forEach(a => a.classList.remove('opacity-40'));
             }
         }
         this.updateExpandIcons(level);
@@ -379,7 +352,7 @@ export class CascadeSelector {
                 const key = a.getAttribute('data-key')!;
                 const icon = a.querySelector('.expand-icon') as HTMLElement;
                 if (icon) {
-                    if (this.expandedParents[level] === String(key) || this.expandedParents[level] === Number(key)) {
+                    if (this.expandedParents[level] === key) {
                         icon.style.transform = 'rotate(90deg)';
                     } else {
                         icon.style.transform = '';
@@ -402,19 +375,17 @@ export class CascadeSelector {
             this.stacks.push(stackDiv);
             this.renderStack(i);
         }
-        // 重新应用所有展开状态
         for (let level = 0; level < this.expandedParents.length; level++) {
             const parentKey = this.expandedParents[level];
             if (parentKey !== undefined) {
-                const parentNode = this.flatData[level]?.find(n => n.key === parentKey);
-                if (parentNode) {
-                    this.applyExpand(level, parentNode);
+                const nodeData = this.flatData[level]?.find(n => String(n.key) === parentKey);
+                if (nodeData) {
+                    this.applyExpand(level, nodeData);
                 }
             }
         }
     }
 
-    // ---------- 选中逻辑 ----------
     private addSelected(node: FlattenedNode) {
         if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) {
             this.removeSelected(this.selectedNodes[0].key);
@@ -479,7 +450,6 @@ export class CascadeSelector {
         return keys;
     }
 
-    // ---------- 搜索 ----------
     private handleSearch(keyword: string) {
         if (!keyword.trim()) {
             this.clearSearchResults();
