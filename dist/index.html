@@ -71,6 +71,7 @@
         <h2>🧩 Junkman</h2>
         <div class="group-title">基础工具</div>
         <a data-target="contextmenu">contextmenu</a>
+        <a data-target="toast">Toast 通知</a>
         <a data-target="request">request</a>
         <a data-target="imgDelay">imgDelay</a>
         <a data-target="dombuilder">createDOMFromTree</a>
@@ -85,6 +86,8 @@
         <a data-target="cascadetree">CascadeTree</a>
         <div class="group-title">表格</div>
         <a data-target="editabletable">EditableTable</a>
+        <div class="group-title">标签页</div>
+        <a data-target="tabs">Tabs 标签页</a>
         <div class="group-title">拖拽排序</div>
         <a data-target="sortable">Sortable</a>
         <div class="group-title">模态框</div>
@@ -98,14 +101,9 @@
 </div>
 
 <script>
-    // ========== 工具函数 ==========
-    function showToast(msg, d = 2000) {
-        const t = document.createElement('div');
-        t.className = 'toast toast-top toast-end';
-        t.innerHTML = `<div class="alert alert-info">${msg}</div>`;
-        document.body.appendChild(t);
-        setTimeout(() => t.remove(), d);
-    }
+    // ========== 初始化 Toast 实例（代替所有临时提示） ==========
+    const toast = new junkman.Toast(junkman.ToastPosition.TopRight);
+    const centerToast = new junkman.Toast(junkman.ToastPosition.MiddleCenter);
 
     function getTreeData() {
         return [
@@ -123,7 +121,6 @@
         ];
     }
 
-    // 通用文档渲染
     function renderSection(title, desc, apiHTML, demoHTML) {
         return `<div class="demo-section">
       <h2>${title}</h2>
@@ -133,7 +130,7 @@
     </div>`;
     }
 
-    // ========== 各组件渲染函数 ==========
+    // ========== 各组件渲染函数 (含新增 Toast / Tabs) ==========
     function renderContextmenu() {
         const api = `<h3>调用方式</h3><pre><code>junkman.contextmenu(elements, items, options?)</code></pre>
       <h3>参数</h3>
@@ -153,6 +150,34 @@
       </div>
       <button class="btn btn-xs btn-outline mt-2" id="destroyCMBtn">销毁菜单</button>`;
         return renderSection('📌 contextmenu 右键菜单', '自定义右键菜单，边界检测，可销毁。', api, demo);
+    }
+
+    function renderToast() {
+        const api = `<pre><code>new junkman.Toast(position?: ToastPosition)</code></pre>
+      <h3>ToastPosition 枚举</h3>
+      <table class="api-table">
+        <tr><th>成员</th><th>值</th></tr>
+        <tr><td>TopLeft</td><td>top-left</td></tr><tr><td>TopCenter</td><td>top-center</td></tr><tr><td>TopRight</td><td>top-right</td></tr>
+        <tr><td>MiddleLeft</td><td>middle-left</td></tr><tr><td>MiddleCenter</td><td>middle-center</td></tr><tr><td>MiddleRight</td><td>middle-right</td></tr>
+        <tr><td>BottomLeft</td><td>bottom-left</td></tr><tr><td>BottomCenter</td><td>bottom-center</td></tr><tr><td>BottomRight</td><td>bottom-right</td></tr>
+      </table>
+      <h3>show(options) 参数</h3>
+      <table class="api-table">
+        <tr><th>属性</th><th>类型</th><th>默认</th><th>说明</th></tr>
+        <tr><td>message</td><td>string</td><td>-</td><td>消息内容</td></tr>
+        <tr><td>type</td><td>string</td><td>info</td><td>info / success / warning / error</td></tr>
+        <tr><td>duration</td><td>number</td><td>3000</td><td>自动关闭毫秒，0 为不自动</td></tr>
+        <tr><td>closable</td><td>boolean</td><td>true</td><td>显示关闭按钮</td></tr>
+      </table>
+      <p><b>方法：</b> <code>show(options)</code>, <code>destroy()</code></p>`;
+        const demo = `<div class="flex flex-wrap gap-2">
+      <button class="btn btn-xs btn-info" onclick="toast.show({message:'信息提示', type:'info'})">信息</button>
+      <button class="btn btn-xs btn-success" onclick="toast.show({message:'操作成功', type:'success'})">成功</button>
+      <button class="btn btn-xs btn-warning" onclick="toast.show({message:'请注意', type:'warning'})">警告</button>
+      <button class="btn btn-xs btn-error" onclick="toast.show({message:'错误发生', type:'error'})">错误</button>
+      <button class="btn btn-xs btn-outline" onclick="centerToast.show({message:'中间通知', type:'info', duration:0})">中间提示</button>
+    </div>`;
+        return renderSection('🔔 Toast 消息通知', '基于 DaisyUI Alert，支持九个方位、四种类型。', api, demo);
     }
 
     function renderRequest() {
@@ -376,6 +401,30 @@
         return renderSection('📝 FormBuilder 表单构建器', '通过 schema 快速生成表单。', api, demo);
     }
 
+    function renderTabs() {
+        const api = `<pre><code>new junkman.Tabs(container, options)</code></pre>
+      <h3>选项</h3>
+      <table class="api-table">
+        <tr><th>属性</th><th>类型</th><th>默认</th><th>说明</th></tr>
+        <tr><td>tabs</td><td>TabItem[]</td><td>-</td><td>标签项数组</td></tr>
+        <tr><td>type</td><td>string</td><td>boxed</td><td>样式 boxed / lifted / bordered</td></tr>
+        <tr><td>activeIndex</td><td>number</td><td>0</td><td>初始激活索引</td></tr>
+        <tr><td>lazy</td><td>boolean</td><td>false</td><td>静态内容懒加载</td></tr>
+      </table>
+      <h3>TabItem 属性</h3>
+      <table class="api-table">
+        <tr><th>属性</th><th>类型</th><th>说明</th></tr>
+        <tr><td>label</td><td>string</td><td>标签文字</td></tr>
+        <tr><td>content</td><td>string | HTMLElement | (signal) => Promise&lt;string|HTMLElement&gt;</td><td>内容，支持异步函数</td></tr>
+        <tr><td>disabled</td><td>boolean</td><td>是否禁用</td></tr>
+        <tr><td>onActive</td><td>() => void</td><td>激活时回调</td></tr>
+      </table>
+      <p><b>方法：</b> <code>setActive(index)</code>, <code>destroy()</code></p>`;
+        const demo = `<div id="tabsDemo" class="mb-4"></div>
+      <p class="text-xs text-gray-400">标签1：静态内容 | 标签2：模拟远程加载 | 标签3：禁用</p>`;
+        return renderSection('📑 Tabs 标签页', '支持静态/异步内容、懒加载和 DaisyUI 三种样式。', api, demo);
+    }
+
     function renderGlobalEvents() {
         const api = `<pre><code>new junkman.GlobalEventManager()</code></pre>
       <p><b>方法：</b> <code>add(target, event, listener)</code>，<code>removeAll()</code></p>
@@ -391,6 +440,7 @@
 
         switch(target) {
             case 'contextmenu': html = renderContextmenu(); break;
+            case 'toast': html = renderToast(); break;
             case 'request': html = renderRequest(); break;
             case 'imgDelay': html = renderImgDelay(); break;
             case 'dombuilder': html = renderDOMBuilder(); break;
@@ -402,6 +452,7 @@
             case 'cascadeselector': html = renderCascadeSelector(); break;
             case 'cascadetree': html = renderCascadeTree(); break;
             case 'editabletable': html = renderEditableTable(); break;
+            case 'tabs': html = renderTabs(); break;
             case 'sortable': html = renderSortable(); break;
             case 'modal': html = renderModal(); break;
             case 'formbuilder': html = renderFormBuilder(); break;
@@ -409,7 +460,7 @@
             default: html = '<div class="demo-section"><h2>请从左侧选择组件</h2></div>';
         }
         container.innerHTML = html;
-        initDemoHandlers(target); // 绑定事件
+        initDemoHandlers(target);
     }
 
     // ========== 各组件动态初始化 ==========
@@ -417,12 +468,18 @@
         if (target === 'contextmenu') {
             const boxes = document.querySelectorAll('.cm-box');
             const destroyFn = junkman.contextmenu(boxes, [
-                { title: '复制', func: () => showToast('复制成功') },
-                { title: '粘贴', func: () => showToast('粘贴成功') },
+                { title: '复制', func: () => toast.show({ message: '复制成功', type: 'success' }) },
+                { title: '粘贴', func: () => toast.show({ message: '粘贴成功', type: 'success' }) },
                 { title: '禁用项' },
                 { title: '控制台输出', func: () => console.log('右键点击') }
             ]);
-            document.getElementById('destroyCMBtn')?.addEventListener('click', () => { destroyFn(); showToast('菜单已销毁'); });
+            document.getElementById('destroyCMBtn')?.addEventListener('click', () => {
+                destroyFn();
+                toast.show({ message: '菜单已销毁', type: 'success' });
+            });
+        }
+        else if (target === 'toast') {
+            // 已全局创建 toast 和 centerToast，无需额外初始化
         }
         else if (target === 'request') {
             const reqBtn = document.getElementById('reqBtn');
@@ -435,7 +492,7 @@
                 try {
                     const data = await junkman.request({ url: 'https://jsonplaceholder.typicode.com/posts/1', signal: controller.signal });
                     result.textContent = JSON.stringify(data, null, 2);
-                    showToast('请求成功');
+                    toast.show({ message: '请求成功', type: 'success' });
                 } catch(e) { result.textContent = '错误: ' + e.message; }
                 finally { reqBtn.disabled = false; abortBtn.classList.add('hidden'); }
             });
@@ -450,12 +507,12 @@
             if (container) {
                 const btn = junkman.createDOMFromTree({
                     tag: 'button', className: 'btn btn-sm btn-primary', textContent: '点击我',
-                    events: { click: () => showToast('动态按钮被点击') }
+                    events: { click: () => toast.show({ message: '动态按钮被点击', type: 'success' }) }
                 });
                 container.appendChild(btn);
             }
         }
-        else if (target === 'icons') { /* 直接渲染 SVG 无需额外初始化 */ }
+        else if (target === 'icons') {}
         else if (target === 'dimensionalTree') {
             const result = document.getElementById('dimTreeResult');
             if (result) {
@@ -467,14 +524,14 @@
             const container = document.getElementById('menuDemo');
             new junkman.selector.Menu({ "苹果": "1", "香蕉": "2", "橙子": "3" }, {
                 limit: 2, placeholder: "请选择水果", menuMaxHeight: "200px",
-                trigger: (d) => showToast(`选中: ${d.value}`), parentNode: container
+                trigger: (d) => toast.show({ message: `选中: ${d.value}`, type: 'success' }), parentNode: container
             }).selected(['2']).make();
         }
         else if (target === 'switcher') {
             const container = document.getElementById('switcherDemo');
             new junkman.selector.Switcher({ "男": "male", "女": "female" }, {
                 limit: 1, towards: junkman.SELECTOR_TOWARDS.Horizontal,
-                trigger: (d) => showToast(`切换为: ${d.value}`), parentNode: container
+                trigger: (d) => toast.show({ message: `切换为: ${d.value}`, type: 'success' }), parentNode: container
             }).selected(['male']).make();
         }
         else if (target === 'paginator') {
@@ -488,7 +545,7 @@
                         const start = (page-1)*size+1, end = Math.min(page*size, total);
                         document.getElementById('paginatorLog').innerHTML = `📄 第${page}页 每页${size}条 显示${start}-${end}`;
                     },
-                    onPageSizeChange: (size) => showToast(`每页条数变为 ${size}`)
+                    onPageSizeChange: (size) => toast.show({ message: `每页条数变为 ${size}`, type: 'info' })
                 });
             }
         }
@@ -496,7 +553,7 @@
             const container = document.getElementById('cascadeSelectorDemo');
             new junkman.CascadeSelector(container, getTreeData(), {
                 searchable: true, placeholder: "请选择地区", limit: 2,
-                onChange: (sel) => showToast(`已选: ${sel.map(n=>n.val).join(', ')}`)
+                onChange: (sel) => toast.show({ message: `已选: ${sel.map(n=>n.val).join(', ')}`, type: 'success' })
             });
         }
         else if (target === 'cascadetree') {
@@ -504,8 +561,8 @@
             new junkman.CascadeTree(container, getTreeData(), {
                 apiUrl: '/api/dummy', searchable: true, draggable: true,
                 onDelete: async (node) => confirm(`删除「${node.val}」？`),
-                onUpdate: async (node, val) => { showToast(`更新: ${node.val} → ${val}`); return true; },
-                onInsert: async (parentKey, newNode) => { showToast(`新增子节点: ${newNode.val}`); return true; }
+                onUpdate: async (node, val) => { toast.show({ message: `更新: ${node.val} → ${val}`, type: 'success' }); return true; },
+                onInsert: async (parentKey, newNode) => { toast.show({ message: `新增子节点: ${newNode.val}`, type: 'success' }); return true; }
             });
         }
         else if (target === 'editabletable') {
@@ -523,10 +580,28 @@
             ]);
             document.getElementById('getTableDataBtn')?.addEventListener('click', () => alert(JSON.stringify(table.getData(), null, 2)));
         }
+        else if (target === 'tabs') {
+            const container = document.getElementById('tabsDemo');
+            if (container) {
+                new junkman.Tabs(container, {
+                    tabs: [
+                        { label: '静态内容', content: '<div class="p-4">这里是静态标签内容。</div>' },
+                        { label: '远程加载', content: async (signal) => {
+                                await new Promise(resolve => setTimeout(resolve, 1200));
+                                if (signal.aborted) throw new Error('Aborted');
+                                return '<div class="p-4 text-success">远程加载的 HTML 片段</div>';
+                            }},
+                        { label: '禁用', content: '不可用', disabled: true }
+                    ],
+                    type: 'boxed',
+                    lazy: true
+                });
+            }
+        }
         else if (target === 'sortable') {
             new junkman.Sortable(document.getElementById('sortableList'), {
                 direction: 'vertical',
-                onSort: (order) => { console.log('排序结果:', order); showToast('排序已更新'); }
+                onSort: (order) => { console.log('排序结果:', order); toast.show({ message: '排序已更新', type: 'success' }); }
             });
         }
         else if (target === 'modal') {
@@ -546,7 +621,7 @@
                 const form = document.createElement('form');
                 form.innerHTML = '<input name="username" class="input input-bordered input-sm w-full mb-2" placeholder="用户名" /><button type="submit" class="btn btn-sm btn-primary">提交</button>';
                 modal.setContent(form);
-                modal.bindSubmit(async (formData) => { showToast(`提交: ${formData.get('username')}`); });
+                modal.bindSubmit(async (formData) => { toast.show({ message: `提交: ${formData.get('username')}`, type: 'success' }); });
                 modal.make();
             });
         }
@@ -562,11 +637,12 @@
                 const fd = new FormData(document.querySelector('#formBuilderDemo form'));
                 const data = {}; fd.forEach((v,k)=>data[k]=v);
                 document.getElementById('formResult').textContent = JSON.stringify(data, null, 2);
+                toast.show({ message: '已获取表单数据', type: 'success' });
             });
         }
     }
 
-    // ========== 导航激活 ==========
+    // 导航激活
     document.querySelectorAll('.sidebar a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();

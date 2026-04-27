@@ -2,10 +2,18 @@
 export { contextmenu } from './aid/contextmenu';
 export { request } from './aid/request';
 export { createDOMFromTree } from './aid/dombuilder';
-export { imgDelay } from './aid/imgdelay';
 export { Icon } from './aid/icon';
 export { dimensionalTree } from './aid/tree';
 export { GlobalEventManager } from './aid/eventmanager';
+
+// ──────────────────────── 图片懒加载 ────────────────────────
+export { imgDelay } from './aid/imgdelay';
+
+// ──────────────────────── Toast 消息通知 ────────────────────────
+export { Toast } from './utils/toast/index';
+
+// ──────────────────────── Tabs 标签页 ────────────────────────
+export { Tabs } from './utils/tabs/index';
 
 // ──────────────────────── 选择器组件 ────────────────────────
 import { Menu as MenuClass } from './utils/selector/menu';
@@ -39,6 +47,9 @@ export const selector = {
 };
 
 // ──────────────────────── 类型导出 ────────────────────────
+export { ToastPosition } from './utils/toast/index';
+export type { ToastOptions, ToastType } from './utils/toast/index';
+export type { TabItem, TabsOptions } from './utils/tabs/index';
 export type { TreeNode, FlattenedNode } from './aid/tree';
 export type { ContextMenuItem, ContextMenuOptions } from './aid/contextmenu';
 export type { RequestOptions, RequestError } from './aid/request';

@@ -271,6 +271,87 @@ var junkman = (function (exports) {
         return dom;
     }
 
+    const Icon = {
+        trash: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+  <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+</svg>`,
+        move: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+</svg>`,
+        write: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+</svg>`,
+        close: `<svg style="vertical-align: middle;" width="16" height="16" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="none" stroke="white" stroke-width="2.5" d="M16,16 L4,4"></path><path fill="none" stroke="white" stroke-width="2.5" d="M16,4 L4,16"></path></svg>`,
+        aspect: `<svg xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path fill="#ffffff" d="M0 12.5v-9A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM2.5 4a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 1 0V5h2.5a.5.5 0 0 0 0-1h-3zm11 8a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-1 0V11h-2.5a.5.5 0 0 0 0 1h3z"/>
+</svg>`,
+        check: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+</svg>`,
+        check_circle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+  <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+</svg>`,
+        caret_right: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z"/>
+</svg>`,
+        caret_right_circle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="M6 12.796V3.204L11.481 8 6 12.796zm.659.753 5.48-4.796a1 1 0 0 0 0-1.506L6.66 2.451C6.011 1.885 5 2.345 5 3.204v9.592a1 1 0 0 0 1.659.753z"/>
+</svg>`,
+        sub_loading: `<svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="16px" height="16px" viewBox="0 0 50 50" style="background: rgb(223 9 127);border-radius: 50%;" xml:space="preserve">
+  <path fill="#ffffff" stroke="#ffffff" d="M25.251,6.461c-10.318,0-18.683,8.365-18.683,18.683h4.068c0-8.071,6.543-14.615,14.615-14.615V6.461z">
+    <animateTransform attributeType="xml" attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.6s" repeatCount="indefinite"></animateTransform>
+    </path>
+  </svg>`,
+        node: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-diagram-3-fill" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5v-1zm-6 8A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5v-1zm6 0A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5v-1zm6 0a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5v-1z"/>
+</svg>`,
+    };
+
+    /**
+     * 将树形结构按层级展平，用于级联选择器的多列渲染
+     * @param nodes 树形节点数组
+     * @param stack 当前层级（内部递归用）
+     * @param parents 当前节点的祖先 key 列表（内部递归用）
+     * @param output 输出数组（内部递归用）
+     * @returns 按层级索引的二维数组，每一层是一个 FlattenedNode 数组
+     */
+    function dimensionalTree(nodes, stack = 0, parents = [], output = []) {
+        if (!output[stack])
+            output[stack] = [];
+        for (const node of nodes) {
+            const flatNode = {
+                ...node,
+                stack,
+                parentNodes: [...parents],
+                originalNode: node,
+            };
+            output[stack].push(flatNode);
+            if (node.nodes && node.nodes.length) {
+                dimensionalTree(node.nodes, stack + 1, [...parents, node.key], output);
+            }
+        }
+        return output;
+    }
+
+    class GlobalEventManager {
+        constructor() {
+            this.events = [];
+        }
+        add(target, type, listener) {
+            target.addEventListener(type, listener);
+            this.events.push({ target, type, listener });
+        }
+        removeAll() {
+            this.events.forEach(({ target, type, listener }) => {
+                target.removeEventListener(type, listener);
+            });
+            this.events = [];
+        }
+    }
+
     function imgDelay(doms, time = 200, options = {}) {
         const { zoom = false, width = 300, height = 0, previewClass = '' } = options;
         // 收集需要清理的资源
@@ -436,84 +517,276 @@ var junkman = (function (exports) {
         };
     }
 
-    const Icon = {
-        trash: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-  <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-</svg>`,
-        move: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-</svg>`,
-        write: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
-</svg>`,
-        close: `<svg style="vertical-align: middle;" width="16" height="16" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="none" stroke="white" stroke-width="2.5" d="M16,16 L4,4"></path><path fill="none" stroke="white" stroke-width="2.5" d="M16,4 L4,16"></path></svg>`,
-        aspect: `<svg xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path fill="#ffffff" d="M0 12.5v-9A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM2.5 4a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 1 0V5h2.5a.5.5 0 0 0 0-1h-3zm11 8a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-1 0V11h-2.5a.5.5 0 0 0 0 1h3z"/>
-</svg>`,
-        check: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
-</svg>`,
-        check_circle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-  <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
-</svg>`,
-        caret_right: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z"/>
-</svg>`,
-        caret_right_circle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-  <path d="M6 12.796V3.204L11.481 8 6 12.796zm.659.753 5.48-4.796a1 1 0 0 0 0-1.506L6.66 2.451C6.011 1.885 5 2.345 5 3.204v9.592a1 1 0 0 0 1.659.753z"/>
-</svg>`,
-        sub_loading: `<svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="16px" height="16px" viewBox="0 0 50 50" style="background: rgb(223 9 127);border-radius: 50%;" xml:space="preserve">
-  <path fill="#ffffff" stroke="#ffffff" d="M25.251,6.461c-10.318,0-18.683,8.365-18.683,18.683h4.068c0-8.071,6.543-14.615,14.615-14.615V6.461z">
-    <animateTransform attributeType="xml" attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.6s" repeatCount="indefinite"></animateTransform>
-    </path>
-  </svg>`,
-        node: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-diagram-3-fill" viewBox="0 0 16 16">
-  <path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5v-1zm-6 8A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5v-1zm6 0A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5v-1zm6 0a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5v-1z"/>
-</svg>`,
-    };
-
-    /**
-     * 将树形结构按层级展平，用于级联选择器的多列渲染
-     * @param nodes 树形节点数组
-     * @param stack 当前层级（内部递归用）
-     * @param parents 当前节点的祖先 key 列表（内部递归用）
-     * @param output 输出数组（内部递归用）
-     * @returns 按层级索引的二维数组，每一层是一个 FlattenedNode 数组
-     */
-    function dimensionalTree(nodes, stack = 0, parents = [], output = []) {
-        if (!output[stack])
-            output[stack] = [];
-        for (const node of nodes) {
-            const flatNode = {
-                ...node,
-                stack,
-                parentNodes: [...parents],
-                originalNode: node,
-            };
-            output[stack].push(flatNode);
-            if (node.nodes && node.nodes.length) {
-                dimensionalTree(node.nodes, stack + 1, [...parents, node.key], output);
+    exports.ToastPosition = void 0;
+    (function (ToastPosition) {
+        ToastPosition["TopLeft"] = "top-left";
+        ToastPosition["TopCenter"] = "top-center";
+        ToastPosition["TopRight"] = "top-right";
+        ToastPosition["MiddleLeft"] = "middle-left";
+        ToastPosition["MiddleCenter"] = "middle-center";
+        ToastPosition["MiddleRight"] = "middle-right";
+        ToastPosition["BottomLeft"] = "bottom-left";
+        ToastPosition["BottomCenter"] = "bottom-center";
+        ToastPosition["BottomRight"] = "bottom-right";
+    })(exports.ToastPosition || (exports.ToastPosition = {}));
+    class Toast {
+        constructor(position = exports.ToastPosition.TopRight) {
+            // 确保容器存在
+            const existing = document.querySelector(`.toast-container[data-position="${position}"]`);
+            if (existing) {
+                this.container = existing;
+            }
+            else {
+                this.container = document.createElement('div');
+                this.container.className = 'toast-container fixed z-[9999] flex flex-col gap-2 p-2 pointer-events-none';
+                this.container.setAttribute('data-position', position);
+                this.applyPosition(position);
+                document.body.appendChild(this.container);
             }
         }
-        return output;
+        applyPosition(position) {
+            const styles = {};
+            switch (position) {
+                case exports.ToastPosition.TopLeft:
+                    styles.top = '1rem';
+                    styles.left = '1rem';
+                    break;
+                case exports.ToastPosition.TopCenter:
+                    styles.top = '1rem';
+                    styles.left = '50%';
+                    styles.transform = 'translateX(-50%)';
+                    break;
+                case exports.ToastPosition.TopRight:
+                    styles.top = '1rem';
+                    styles.right = '1rem';
+                    break;
+                case exports.ToastPosition.MiddleLeft:
+                    styles.top = '50%';
+                    styles.left = '1rem';
+                    styles.transform = 'translateY(-50%)';
+                    break;
+                case exports.ToastPosition.MiddleCenter:
+                    styles.top = '50%';
+                    styles.left = '50%';
+                    styles.transform = 'translate(-50%, -50%)';
+                    break;
+                case exports.ToastPosition.MiddleRight:
+                    styles.top = '50%';
+                    styles.right = '1rem';
+                    styles.transform = 'translateY(-50%)';
+                    break;
+                case exports.ToastPosition.BottomLeft:
+                    styles.bottom = '1rem';
+                    styles.left = '1rem';
+                    break;
+                case exports.ToastPosition.BottomCenter:
+                    styles.bottom = '1rem';
+                    styles.left = '50%';
+                    styles.transform = 'translateX(-50%)';
+                    break;
+                case exports.ToastPosition.BottomRight:
+                    styles.bottom = '1rem';
+                    styles.right = '1rem';
+                    break;
+            }
+            Object.assign(this.container.style, styles);
+        }
+        show(options) {
+            const { message, type = 'info', duration = 3000, closable = true } = options;
+            const toast = document.createElement('div');
+            toast.className = 'pointer-events-auto w-80 transition-all duration-300';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            const alertClass = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info'}`;
+            toast.innerHTML = `
+      <div class="${alertClass} shadow-lg">
+        <span>${message}</span>
+        ${closable ? '<button class="btn btn-sm btn-ghost ml-2" onclick="this.closest(\'.pointer-events-auto\').remove()">✕</button>' : ''}
+      </div>
+    `;
+            // 关闭处理
+            let autoCloseTimer;
+            if (duration > 0) {
+                autoCloseTimer = window.setTimeout(() => {
+                    this.removeToast(toast);
+                }, duration);
+            }
+            if (closable) {
+                const closeBtn = toast.querySelector('button');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        if (autoCloseTimer)
+                            clearTimeout(autoCloseTimer);
+                        this.removeToast(toast);
+                    });
+                }
+            }
+            this.container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
+            return toast;
+        }
+        removeToast(toast) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            setTimeout(() => {
+                if (toast.parentNode === this.container) {
+                    this.container.removeChild(toast);
+                }
+            }, 300);
+        }
+        destroy() {
+            if (this.container.parentNode) {
+                this.container.parentNode.removeChild(this.container);
+            }
+        }
     }
 
-    class GlobalEventManager {
-        constructor() {
-            this.events = [];
+    class Tabs {
+        constructor(selector, options) {
+            var _a;
+            this.tabLabels = [];
+            this.tabContents = [];
+            this.rendered = false;
+            this.loadingStates = new Map(); // 记录哪些 tab 正在加载
+            this.abortControllers = new Map(); // 用于取消请求
+            this.container = typeof selector === 'string' ? document.querySelector(selector) : selector;
+            if (!this.container)
+                throw new Error('Tabs container not found');
+            this.tabs = options.tabs;
+            this.options = options;
+            this.activeIndex = (_a = options.activeIndex) !== null && _a !== void 0 ? _a : 0;
+            this.render();
         }
-        add(target, type, listener) {
-            target.addEventListener(type, listener);
-            this.events.push({ target, type, listener });
-        }
-        removeAll() {
-            this.events.forEach(({ target, type, listener }) => {
-                target.removeEventListener(type, listener);
+        render() {
+            this.container.innerHTML = '';
+            const { type = 'boxed' } = this.options;
+            // 标签导航
+            const nav = document.createElement('div');
+            nav.className = `tabs tabs-${type}`;
+            this.tabLabels = [];
+            this.tabs.forEach((tab, index) => {
+                const label = document.createElement('a');
+                label.className = `tab tab-${type} ${index === this.activeIndex ? 'tab-active' : ''}`;
+                if (tab.disabled)
+                    label.className += ' tab-disabled';
+                label.textContent = tab.label;
+                label.addEventListener('click', () => {
+                    if (!tab.disabled)
+                        this.setActive(index);
+                });
+                nav.appendChild(label);
+                this.tabLabels.push(label);
             });
-            this.events = [];
+            // 内容区域
+            const contentContainer = document.createElement('div');
+            contentContainer.className = 'mt-2';
+            this.tabContents = [];
+            this.tabs.forEach((tab, index) => {
+                const pane = document.createElement('div');
+                pane.className = `tab-content ${index === this.activeIndex ? 'block' : 'hidden'}`;
+                // 决定是否立即渲染内容
+                const isAsync = typeof tab.content === 'function';
+                if (!isAsync && (index === this.activeIndex || !this.options.lazy)) {
+                    this.renderStaticContent(pane, tab.content);
+                }
+                else if (isAsync && index === this.activeIndex) {
+                    // 异步内容在激活时加载，此处先显示 loading
+                    this.showLoading(pane);
+                    this.loadAsyncContent(index, pane);
+                }
+                // 如果是静态懒加载且未激活，保持空白
+                this.tabContents.push(pane);
+                contentContainer.appendChild(pane);
+            });
+            this.container.appendChild(nav);
+            this.container.appendChild(contentContainer);
+            this.rendered = true;
+        }
+        renderStaticContent(pane, content) {
+            pane.innerHTML = '';
+            if (typeof content === 'string') {
+                pane.innerHTML = content;
+            }
+            else {
+                pane.appendChild(content);
+            }
+        }
+        showLoading(pane) {
+            pane.innerHTML = '<div class="flex justify-center items-center py-8"><span class="loading loading-spinner loading-lg"></span></div>';
+        }
+        async loadAsyncContent(index, pane) {
+            var _a;
+            // 取消之前的请求（如果有）
+            if (this.abortControllers.has(index)) {
+                (_a = this.abortControllers.get(index)) === null || _a === void 0 ? void 0 : _a.abort();
+            }
+            const controller = new AbortController();
+            this.abortControllers.set(index, controller);
+            this.loadingStates.set(index, true);
+            try {
+                const fn = this.tabs[index].content;
+                const result = await fn(controller.signal);
+                // 确保组件未销毁且当前 pane 仍是目标
+                if (!this.tabContents.includes(pane))
+                    return;
+                this.renderStaticContent(pane, result);
+            }
+            catch (error) {
+                if ((error === null || error === void 0 ? void 0 : error.name) === 'AbortError')
+                    return; // 请求被取消，忽略
+                if (!this.tabContents.includes(pane))
+                    return;
+                pane.innerHTML = `<div class="flex justify-center items-center py-8 text-error">加载失败: ${error.message || '未知错误'}</div>`;
+            }
+            finally {
+                this.loadingStates.set(index, false);
+                this.abortControllers.delete(index);
+            }
+        }
+        setActive(index) {
+            var _a;
+            if (index < 0 || index >= this.tabs.length || this.tabs[index].disabled)
+                return;
+            if (this.activeIndex === index)
+                return;
+            // 切换样式
+            this.tabLabels[this.activeIndex].classList.remove('tab-active');
+            this.tabLabels[index].classList.add('tab-active');
+            // 切换内容
+            const oldPane = this.tabContents[this.activeIndex];
+            const newPane = this.tabContents[index];
+            oldPane.classList.add('hidden');
+            oldPane.classList.remove('block');
+            newPane.classList.remove('hidden');
+            newPane.classList.add('block');
+            this.activeIndex = index;
+            // 异步加载判断
+            const tab = this.tabs[index];
+            const isAsync = typeof tab.content === 'function';
+            const isEmpty = newPane.innerHTML === '' || newPane.children.length === 0;
+            if (isAsync) {
+                this.showLoading(newPane);
+                this.loadAsyncContent(index, newPane);
+            }
+            else if (isEmpty && this.options.lazy) {
+                // 静态懒加载且尚未渲染
+                this.renderStaticContent(newPane, tab.content);
+            }
+            (_a = tab.onActive) === null || _a === void 0 ? void 0 : _a.call(tab);
+        }
+        getActiveIndex() {
+            return this.activeIndex;
+        }
+        destroy() {
+            // 取消所有进行中的异步请求
+            this.abortControllers.forEach((controller) => controller.abort());
+            this.abortControllers.clear();
+            this.container.innerHTML = '';
+            this.tabLabels = [];
+            this.tabContents = [];
         }
     }
 
@@ -4025,6 +4298,8 @@ var junkman = (function (exports) {
     exports.Modal = Modal;
     exports.Paginator = Paginator;
     exports.Sortable = Sortable;
+    exports.Tabs = Tabs;
+    exports.Toast = Toast;
     exports.contextmenu = contextmenu;
     exports.createDOMFromTree = createDOMFromTree;
     exports.dimensionalTree = dimensionalTree;
