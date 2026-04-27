@@ -1,108 +1,443 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Junkman 组件库测试 (DaisyUI)</title>
+    <!-- 引入打包后的资源 -->
     <script src="./junkman.js"></script>
-    <link rel="stylesheet" href="./junkman.css" type="text/css"/>
+    <link href="./junkman.css" rel="stylesheet" />
     <style>
-        .ka {
-            width: 60px;
-            height: 30px;
-            background: red;
-            display: block;
-        }
-
         body {
-            background: url(./bg.svg) repeat;
-            width: 100%;
-            min-height: calc(100vh);
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            padding: 20px;
         }
+        .test-section {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .test-section h2 {
+            margin-bottom: 1rem;
+            color: hsl(45, 100%, 72%);
+        }
+        .demo-box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+        /* 用于可拖拽排序的列表项样式 */
+        .drag-item {
+            background: #4a6a8a;
+            margin: 5px;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: grab;
+            user-select: none;
+        }
+        .drag-item:active { cursor: grabbing; }
     </style>
 </head>
-<body>
-<div>
-    <div id="p">
-        <div class="ka">1</div>
-        <div class="ka">2</div>
-        <div class="ka">3</div>
-    </div>
+<body class="text-gray-100">
+<h1 class="text-3xl font-bold text-center my-6">🧩 Junkman 组件库 (DaisyUI)</h1>
 
-    <div style="display: flex;justify-content: center">
-        <div id="selector-menu" style="width: 220px;margin-bottom: 120px"></div>
-    </div>
-
-    <div style="display: flex;justify-content: center;margin-bottom: 120px">
-        <div id="selector-switcher" style="width: 220px"></div>
-    </div>
-
-    <div style="display: flex;justify-content: center;margin-bottom: 120px">
-        <div id="selector-sandbox" style="width: 320px"></div>
+<!-- ===== 1. 基础工具 ===== -->
+<div class="test-section">
+    <h2 class="text-xl border-l-4 border-yellow-300 pl-3">📌 基础工具</h2>
+    <div class="demo-box">
+        <p>右键菜单 (contextmenu) – 右键下方方块</p>
+        <div class="flex gap-3 mt-2">
+            <div class="ka w-20 h-12 flex items-center justify-center rounded-lg bg-orange-500 text-white cursor-context-menu">右键1</div>
+            <div class="ka w-20 h-12 flex items-center justify-center rounded-lg bg-green-500 text-white cursor-context-menu">右键2</div>
+            <div class="ka w-20 h-12 flex items-center justify-center rounded-lg bg-red-500 text-white cursor-context-menu">右键3</div>
+        </div>
+        <hr class="my-4 border-gray-600">
+        <p>AJAX 请求 (request) – 点击按钮请求数据，按钮会显示 loading</p>
+        <button id="requestBtn" class="btn btn-primary btn-sm mt-2">
+            <span class="btn-text">发送请求</span>
+            <span class="loading loading-spinner loading-sm hidden"></span>
+        </button>
+        <pre id="requestResult" class="bg-gray-900 text-green-400 p-2 mt-2 rounded max-h-32 overflow-auto"></pre>
     </div>
 </div>
+
+<!-- ===== 2. 选择器 ===== -->
+<div class="test-section">
+    <h2 class="text-xl border-l-4 border-yellow-300 pl-3">📋 选择器组件</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <h3 class="text-lg mb-2">下拉菜单 (Menu)</h3>
+            <div id="menuDemo"></div>
+        </div>
+        <div>
+            <h3 class="text-lg mb-2">开关切换 (Switcher)</h3>
+            <div id="switcherDemo"></div>
+        </div>
+    </div>
+    <div class="mt-6">
+        <h3 class="text-lg mb-2">分页器 (Paginator)</h3>
+        <div id="paginatorDemo"></div>
+        <div id="paginatorLog" class="text-sm text-gray-400 mt-2 bg-gray-800 p-2 rounded"></div>
+    </div>
+</div>
+
+<!-- ===== 3. 级联 ===== -->
+<div class="test-section">
+    <h2 class="text-xl border-l-4 border-yellow-300 pl-3">🌲 级联选择器 / 树形管理</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <h3 class="text-lg mb-2">CascadeSelector</h3>
+            <div id="cascadeDemo" class="bg-white rounded-lg" style="min-height:250px"></div>
+        </div>
+        <div>
+            <h3 class="text-lg mb-2">CascadeTree</h3>
+            <div id="cascadeTreeDemo" class="bg-white rounded-lg" style="min-height:250px"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 4. 表格与拖拽 ===== -->
+<div class="test-section">
+    <h2 class="text-xl border-l-4 border-yellow-300 pl-3">📊 可编辑表格 & 拖拽排序</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <h3 class="text-lg mb-2">EditableTable</h3>
+            <div id="tableDemo"></div>
+            <button id="getTableDataBtn" class="btn btn-sm btn-outline mt-2">获取表格数据</button>
+        </div>
+        <div>
+            <h3 class="text-lg mb-2">独立拖拽排序 (Sortable)</h3>
+            <div id="sortableList" class="p-4 border-2 border-dashed border-gray-500 rounded-lg min-h-[120px]">
+                <div class="drag-item" data-sortable-item>📦 项目 A</div>
+                <div class="drag-item" data-sortable-item>📦 项目 B</div>
+                <div class="drag-item" data-sortable-item>📦 项目 C</div>
+                <div class="drag-item" data-sortable-item>📦 项目 D</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 5. 模态框 ===== -->
+<div class="test-section">
+    <h2 class="text-xl border-l-4 border-yellow-300 pl-3">🪟 模态框 (Modal)</h2>
+    <div class="flex gap-3">
+        <button id="openModalBtn" class="btn btn-primary">打开远程内容模态框</button>
+        <button id="openSimpleModalBtn" class="btn btn-secondary">打开简单内容模态框</button>
+    </div>
+</div>
+
 <script>
-    junkman.contextmenu(document.querySelectorAll(".ka"), [
-        {title: 't1', func: () => alert(1)},
-        {title: 't2', func: () => alert(2)}
-    ]);
-    //junkman.request({url:'xx',data:{a:1}})
-    //new junkman.Tip().push("ssssss",5000);
-    let testData = {"a":'1',"b":'2',"c":'3',"d":'4',"e":'5'};
+    // ---------- 通用 Toast 提示函数（代替原 Tip 组件） ----------
+    function showToast(message, duration = 2000) {
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-top toast-end';
+        toast.innerHTML = `<div class="alert alert-info">${message}</div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), duration);
+    }
 
-    let m = new junkman.selector.Menu(testData,{
-        placeholder:"test",
-        menuMaxHeight:"100px",
-        hiddenInput:"menu",
-        trigger:(data)=>{
-            console.log('choose option trigger this event:');
-            console.log(data);
-        },
-        wrap:true,
-        parentNode:document.getElementById('selector-menu')
-    }).make();
-    m.selected(['1']);
+    // ---------- 等待 junkman 可用 ----------
+    document.addEventListener('DOMContentLoaded', function() {
+        // ===== 1. 基础工具 =====
+        // 右键菜单
+        const elements = document.querySelectorAll('.ka');
+        if (junkman.contextmenu) {
+            junkman.contextmenu(elements, [
+                { title: '选项 1', func: () => alert('你点击了选项 1') },
+                { title: '选项 2', func: () => alert('你点击了选项 2') },
+                { title: '控制台输出', func: () => console.log('右键菜单触发') }
+            ]);
+        }
 
-    new junkman.selector.Switcher(testData,{
-        limit:1,
-        hiddenInput:"switcher",
-        trigger:(data)=>{
-            console.log('choose option trigger this event:');
-            console.log(data);
-        },
-        towards:junkman.SELECTOR_TOWARDS.Vertical,
-        parentNode:document.getElementById('selector-switcher')
-    })
-        .selected(['3'])
-        .make();
+        // 请求按钮 (带 loading 状态)
+        const requestBtn = document.getElementById('requestBtn');
+        const btnText = requestBtn.querySelector('.btn-text');
+        const btnSpinner = requestBtn.querySelector('.loading');
+        const resultDiv = document.getElementById('requestResult');
 
-    let modal = new junkman.Modal({
-        title:'xxxx',
-        fullscreen:false,
-        gauze:true,
-        headerHidden:false,
-        aspect:{width:"300px"},
-        position:{x:"L10px",y:"B10px"},
-        zIndex:1000,
-        //timeout:5,
+        requestBtn.addEventListener('click', async () => {
+            requestBtn.disabled = true;
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            resultDiv.textContent = '请求中...';
+            try {
+                const data = await junkman.request({
+                    url: 'https://jsonplaceholder.typicode.com/posts/1',
+                    method: 'GET'
+                });
+                // 假设返回的是 JSON 或字符串
+                resultDiv.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+                showToast('请求成功');
+            } catch (err) {
+                resultDiv.textContent = '请求失败: ' + err.message;
+                showToast('请求失败', 3000);
+            } finally {
+                requestBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+            }
+        });
+
+        // ===== 2. 选择器组件 =====
+        const testData = { "苹果": "1", "香蕉": "2", "橙子": "3", "葡萄": "4", "西瓜": "5" };
+
+        // Menu (下拉多选)
+        const menuContainer = document.getElementById('menuDemo');
+        const menu = new junkman.selector.Menu(testData, {
+            limit: 2,
+            placeholder: "请选择水果",
+            menuMaxHeight: "220px",
+            hiddenInput: "fruit_menu",
+            trigger: (data) => {
+                showToast(`选择了: ${data.value}`);
+            },
+            wrap: false,
+            parentNode: menuContainer
+        }).selected(['3']).make();
+        //menu.selected(['3']);  // 默认选中橙子
+
+        // Switcher (开关切换)
+        const switcherContainer = document.getElementById('switcherDemo');
+        const switcher = new junkman.selector.Switcher(testData, {
+            limit: 1,
+            hiddenInput: "fruit_switcher",
+            trigger: (data) => {
+                showToast(`切换为: ${data.value}`);
+            },
+            towards: junkman.SELECTOR_TOWARDS.Horizontal,
+            parentNode: switcherContainer
+        }).make();  // 默认选中香蕉
+        switcher.selected(['2']);
+
+        // Paginator
+        const totalRecords = 58;
+        const paginator = new junkman.Paginator(document.getElementById('paginatorDemo'), {
+            total: totalRecords,
+            pageSize: 10,
+            currentPage: 1,
+            maxButtons: 5,
+            showJump: true,
+            showTotal: true,
+            onPageChange: (page, pageSize) => {
+                const start = (page - 1) * pageSize + 1;
+                const end = Math.min(page * pageSize, totalRecords);
+                document.getElementById('paginatorLog').innerHTML =
+                    `📄 第 ${page} 页，每页 ${pageSize} 条，共 ${totalRecords} 条 → 显示 ${start}-${end}`;
+            }
+        });
+
+        // ===== 3. 级联组件 =====
+        const treeData = [
+            { key: 1, val: "华北", nodes: [
+                    { key: 11, val: "北京市", nodes: [
+                            { key: 111, val: "东城区", nodes: [] },
+                            { key: 112, val: "西城区", nodes: [] },
+                            { key: 113, val: "朝阳区", nodes: [
+                                    { key: 1131, val: "三里屯街道", nodes: [] },
+                                    { key: 1132, val: "望京街道", nodes: [] },
+                                    { key: 1133, val: "CBD核心区（超长文本测试长文本节点显示效果）", nodes: [] }
+                                ]},
+                            { key: 114, val: "海淀区", nodes: [] }
+                        ]},
+                    { key: 12, val: "天津市", nodes: [
+                            { key: 121, val: "和平区", nodes: [] },
+                            { key: 122, val: "河西区", nodes: [] }
+                        ]},
+                    { key: 13, val: "河北省", nodes: [
+                            { key: 131, val: "石家庄市", nodes: [
+                                    { key: 1311, val: "长安区", nodes: [] },
+                                    { key: 1312, val: "桥西区", nodes: [] },
+                                    { key: 1313, val: "裕华区", nodes: [] }
+                                ]},
+                            { key: 132, val: "唐山市", nodes: [] },
+                            { key: 133, val: "秦皇岛市", nodes: [] }
+                        ]}
+                ]},
+            { key: 2, val: "华东", nodes: [
+                    { key: 21, val: "上海市", nodes: [
+                            { key: 211, val: "黄浦区", nodes: [] },
+                            { key: 212, val: "徐汇区", nodes: [] },
+                            { key: 213, val: "浦东新区", nodes: [
+                                    { key: 2131, val: "陆家嘴街道", nodes: [] },
+                                    { key: 2132, val: "张江高科技园区", nodes: [] },
+                                    { key: 2133, val: "临港新片区（测试超长文本显示效果啦啦啦）", nodes: [] }
+                                ]}
+                        ]},
+                    { key: 22, val: "江苏省", nodes: [
+                            { key: 221, val: "南京市", nodes: [
+                                    { key: 2211, val: "玄武区", nodes: [] },
+                                    { key: 2212, val: "鼓楼区", nodes: [] }
+                                ]},
+                            { key: 222, val: "苏州市", nodes: [
+                                    { key: 2221, val: "姑苏区", nodes: [] },
+                                    { key: 2222, val: "工业园区", nodes: [] }
+                                ]},
+                            { key: 223, val: "无锡市", nodes: [] }
+                        ]},
+                    { key: 23, val: "浙江省", nodes: [
+                            { key: 231, val: "杭州市", nodes: [
+                                    { key: 2311, val: "西湖区", nodes: [] },
+                                    { key: 2312, val: "余杭区", nodes: [] }
+                                ]},
+                            { key: 232, val: "宁波市", nodes: [] }
+                        ]}
+                ]},
+            { key: 3, val: "华南", nodes: [
+                    { key: 31, val: "广东省", nodes: [
+                            { key: 311, val: "广州市", nodes: [
+                                    { key: 3111, val: "天河区", nodes: [] },
+                                    { key: 3112, val: "越秀区", nodes: [] }
+                                ]},
+                            { key: 312, val: "深圳市", nodes: [
+                                    { key: 3121, val: "南山区", nodes: [] },
+                                    { key: 3122, val: "福田区", nodes: [] },
+                                    { key: 3123, val: "宝安区", nodes: [] }
+                                ]},
+                            { key: 313, val: "佛山市", nodes: [] }
+                        ]},
+                    { key: 32, val: "广西壮族自治区", nodes: [
+                            { key: 321, val: "南宁市", nodes: [] },
+                            { key: 322, val: "桂林市", nodes: [] }
+                        ]},
+                    { key: 33, val: "海南省", nodes: [
+                            { key: 331, val: "海口市", nodes: [] },
+                            { key: 332, val: "三亚市", nodes: [] }
+                        ]}
+                ]},
+            { key: 4, val: "西南", nodes: [
+                    { key: 41, val: "四川省", nodes: [
+                            { key: 411, val: "成都市", nodes: [
+                                    { key: 4111, val: "锦江区", nodes: [] },
+                                    { key: 4112, val: "青羊区", nodes: [] },
+                                    { key: 4113, val: "高新区", nodes: [] }
+                                ]},
+                            { key: 412, val: "绵阳市", nodes: [] }
+                        ]},
+                    { key: 42, val: "重庆市", nodes: [
+                            { key: 421, val: "渝中区", nodes: [] },
+                            { key: 422, val: "江北区", nodes: [] }
+                        ]},
+                    { key: 43, val: "云南省", nodes: [
+                            { key: 431, val: "昆明市", nodes: [] },
+                            { key: 432, val: "大理白族自治州", nodes: [] }
+                        ]}
+                ]}
+        ];
+
+        // CascadeSelector
+        const cascade = new junkman.CascadeSelector(
+            document.getElementById('cascadeDemo'),
+            treeData,
+            {
+                searchable: true,
+                placeholder: "请选择地区",
+                limit: 2,
+                onChange: (selected) => {
+                    showToast(`已选: ${selected.map(n => n.val).join(', ')}`);
+                }
+            }
+        );
+        cascade.setValue([4111,421]);
+
+        // CascadeTree (树管理 + 右键)
+        new junkman.CascadeTree(
+            document.getElementById('cascadeTreeDemo'),
+            treeData,
+            {
+                apiUrl: "/api/dummy",   // 下文提供了回调，不会实际请求
+                searchable: true,
+                placeholder: "树形管理 (右键)",
+                /*formRenderer: (node, type, context) => {
+                    // 自定义表单，返回 HTMLElement
+                    if (type === 'insert') {
+                        const div = document.createElement('div');
+                        div.innerHTML = '...'; // 你的表单
+                        return div;
+                    }
+                    return undefined; // 使用默认
+                },*/
+                onDelete: async (node) => {
+                    // 特殊删除逻辑，不走后台
+                    return confirm('真的要删除吗？');
+                }
+            }
+        );
+
+        // ===== 4. 表格与排序 =====
+        // EditableTable
+        const tableColumns = [
+            { name: "ID", field: "id", type: "text", width: "60px" },
+            { name: "姓名", field: "name", type: "input", editable: true },
+            { name: "性别", field: "gender", type: "select", options: { list: [{key:"男",value:"男"},{key:"女",value:"女"}] } },
+            { name: "头像", field: "avatar", type: "image", delay: false }
+        ];
+        const tableData = [
+            { id: 1, name: "张三", gender: "男", avatar: "https://picsum.photos/40/40?random=1" },
+            { id: 2, name: "李四", gender: "女", avatar: "https://picsum.photos/40/40?random=2" }
+        ];
+        const table = new junkman.EditableTable('#tableDemo', tableColumns, {
+            sortable: true,
+            deletable: true,
+            insertable: true,
+            onDataChange: (data) => console.log('表格数据变更', data),
+            onSort: (order, originalData) => {
+                // order: ['1','3','2'] 或 [0,2,1]（取决于元素 data-id）
+                // originalData: 当前数据数组
+                // 必须返回排序后的新数组
+                console.log(originalData)
+                const idToRow = new Map(originalData.map(row => [String(row.id), row]));
+                return order.map(id => idToRow.get(String(id))).filter(Boolean);
+            }
+        });
+        table.loadData(tableData);
+        document.getElementById('getTableDataBtn').addEventListener('click', () => {
+            alert(JSON.stringify(table.getData(), null, 2));
+        });
+
+        // Sortable 独立拖拽
+        const sortableList = document.getElementById('sortableList');
+        new junkman.Sortable(sortableList, {
+            direction: 'vertical',
+            onSort: (order) => {
+                console.log(order); // ['b','a','c']
+            }
+        });
+
+        // ---- 5. 模态框 ----
+        document.getElementById('openSimpleModalBtn').addEventListener('click', () => {
+            const modal = new junkman.Modal({
+                title: '简单模态框',
+                aspect: { width: "400px", height: "200px" },
+                gauze: true
+            });
+            const content = junkman.createDOMFromTree({
+                styles: { padding: '20px' },
+                nodes: '<h3>自定义内容</h3><p>这是一个简单的模态框</p>'
+            });
+            modal.setContent(content);
+            modal.make();
+        });
+
+        document.getElementById('openRemoteModalBtn').addEventListener('click', () => {
+            const modal = new junkman.Modal({
+                title: '远程内容演示',
+                aspect: { width: "500px", height: "300px" },
+                gauze: true
+            });
+            modal.setContent('加载中...');
+            modal.make();
+            // 模拟远程加载
+            setTimeout(() => {
+                modal.setLinkContent('<h3>远程内容</h3><p>这是动态加载的 HTML 片段</p>');
+            }, 1000);
+        });
+
+        // 页面加载完成提示
+        showToast('组件库加载完成', 1500);
     });
-/*    modal.setContent(junkman.createDOMFromTree({
-        styles:{color:'green'},
-        nodes: "<h1>this is a test</h1>"
-    }));
-    modal.make();*/
-/*    new junkman.selector.Sandbox(document.getElementById('selector-sandbox'), {"a": '1', "b": '2', "c": '3'})
-        .settings({direction: junkman.SELECTOR_MENU_DIRECTION.Down})
-        .limit(1)
-        //.searchOff()
-        .useHiddenInput("sandbox_select")
-        .selected(['1'])
-        .trigger((data) => {
-            console.log('choose option trigger this event:');
-            console.log("the current selected option value is :" + data.value);
-            if (junkman.SELECTOR_MODE.Insert === data.operate) console.log("choose this option");
-            if (junkman.SELECTOR_MODE.Delete === data.operate) console.log("cancel this option");
-        })
-        .make();*/
 </script>
 </body>
 </html>
