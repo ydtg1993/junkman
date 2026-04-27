@@ -4283,8 +4283,120 @@ var junkman = (function (exports) {
         pageSizeLabel: '每页',
     };
 
-    // ──────────────────────── 基础工具 ────────────────────────
-    // ──────────────────────── 兼容性命名空间 ────────────────────────
+    class SidebarTabs {
+        constructor(options) {
+            var _a;
+            this.contentContainer = null;
+            this.navLinks = new Map();
+            this.container = typeof options.container === 'string'
+                ? document.querySelector(options.container)
+                : options.container;
+            if (!this.container)
+                throw new Error('SidebarTabs container not found');
+            this.options = options;
+            this.activeTarget = options.defaultActive || ((_a = options.items[0]) === null || _a === void 0 ? void 0 : _a.target) || '';
+            this.render();
+        }
+        /**
+         * 完整渲染布局：左侧导航 + 右侧内容
+         */
+        render() {
+            this.container.innerHTML = '';
+            this.container.className = 'layout';
+            // 左侧导航
+            const sidebar = document.createElement('nav');
+            sidebar.className = 'sidebar';
+            const title = document.createElement('h2');
+            title.textContent = '🧩 Junkman';
+            sidebar.appendChild(title);
+            let currentGroup = '';
+            for (const item of this.options.items) {
+                // 分组标题
+                if (item.group && item.group !== currentGroup) {
+                    const groupTitle = document.createElement('div');
+                    groupTitle.className = 'group-title';
+                    groupTitle.textContent = item.group;
+                    sidebar.appendChild(groupTitle);
+                    currentGroup = item.group;
+                }
+                const link = document.createElement('a');
+                link.setAttribute('data-target', item.target);
+                link.textContent = item.label;
+                if (item.target === this.activeTarget) {
+                    link.classList.add('active');
+                }
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.navigateTo(item.target);
+                });
+                sidebar.appendChild(link);
+                this.navLinks.set(item.target, link);
+            }
+            // 右侧内容
+            const content = document.createElement('main');
+            const contentId = this.options.contentId || 'mainContent';
+            content.id = contentId;
+            content.className = 'content';
+            this.contentContainer = content;
+            this.container.appendChild(sidebar);
+            this.container.appendChild(content);
+            // 渲染默认激活的内容
+            this.navigateTo(this.activeTarget, true);
+        }
+        /**
+         * 获取某项配置
+         */
+        getItem(target) {
+            return this.options.items.find(i => i.target === target);
+        }
+        /**
+         * 切换到指定 target
+         */
+        navigateTo(target, isInitial = false) {
+            var _a;
+            if (!isInitial && target === this.activeTarget)
+                return;
+            // 更新导航激活状态
+            const oldLink = this.navLinks.get(this.activeTarget);
+            if (oldLink)
+                oldLink.classList.remove('active');
+            const newLink = this.navLinks.get(target);
+            if (newLink)
+                newLink.classList.add('active');
+            this.activeTarget = target;
+            // 渲染内容
+            const item = this.getItem(target);
+            if (item === null || item === void 0 ? void 0 : item.render) {
+                if (this.contentContainer) {
+                    this.contentContainer.innerHTML = item.render();
+                }
+                // 内容渲染后执行初始化
+                (_a = item.afterRender) === null || _a === void 0 ? void 0 : _a.call(item);
+            }
+            else {
+                // 无渲染函数时显示提示
+                if (this.contentContainer) {
+                    this.contentContainer.innerHTML = '<div class="demo-section"><h2>请从左侧选择组件</h2></div>';
+                }
+            }
+        }
+        /**
+         * 销毁组件
+         */
+        destroy() {
+            this.navLinks.forEach(link => {
+                link.removeEventListener('click', () => { });
+            });
+            this.navLinks.clear();
+            this.container.innerHTML = '';
+            this.contentContainer = null;
+        }
+    }
+
+    // ============================================================
+    // ============================================================
+    // 📦 兼容性命名空间（保留旧的 selector 对象写法）
+    // ============================================================
     const selector = {
         Menu: Menu,
         Switcher: Switcher,
@@ -4298,6 +4410,7 @@ var junkman = (function (exports) {
     exports.Icon = Icon;
     exports.Modal = Modal;
     exports.Paginator = Paginator;
+    exports.SidebarTabs = SidebarTabs;
     exports.Sortable = Sortable;
     exports.Tabs = Tabs;
     exports.Toast = Toast;
