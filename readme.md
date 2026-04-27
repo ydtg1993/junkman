@@ -13,24 +13,27 @@
 - 📦 **零框架依赖**：纯原生 JavaScript 实现，兼容任何前端技术栈。
 - 📚 **完善的文档 & 交互式 Demo**：开箱即用的 HTML 页面，可预览所有组件并查看 API 说明。
 
-## 🚀 安装与使用
+### 🚀 安装与使用
+
+```
+# 安装依赖
+npm install
+
+# 构建 CSS（Tailwind + DaisyUI）
+npm run build:css
+
+# 构建 JavaScript（Rollup + TypeScript）
+npm run build
+
+# 开启开发服务器（可选）
+npm run dev
+```
+
+> 打包产物：dist/junkman.js 和 dist/junkman.css
 
 ### 直接引入打包文件
 
 ```html
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!DOCTYPE html>
 <html data-theme="dark">
 <head>
@@ -52,8 +55,7 @@
     modal.make();
   </script>
 </html>
-
-> 打包产物：dist/junkman.js 和 dist/junkman.css
+```
 
 ### 📂 项目结构
 
@@ -81,4 +83,7 @@
 > 所有组件均提供 destroy() 方法，用于彻底清理事件和 DOM。
 
 ### 📖 交互式文档
-项目包含一个完整的 dist/index.html（基于 DaisyUI 样式），左侧导航选择组件，右侧展示说明、参数表格和可交互的演示。
+
+#### [在线演示文档](https://codepen.io/ydtg1993-the-bashful/pen/bNBbqQW)
+
+> 项目包含一个完整的 dist/index.html（基于 DaisyUI 样式），左侧导航选择组件，右侧展示说明、参数表格和可交互的演示。
