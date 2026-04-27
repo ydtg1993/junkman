@@ -597,13 +597,14 @@ var junkman = (function (exports) {
             toast.className = 'pointer-events-auto w-80 transition-all duration-300';
             toast.style.opacity = '0';
             toast.style.transform = 'translateY(-10px)';
-            const alertClass = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info'}`;
-            toast.innerHTML = `
-      <div class="${alertClass} shadow-lg">
-        <span>${message}</span>
-        ${closable ? '<button class="btn btn-sm btn-ghost ml-2" onclick="this.closest(\'.pointer-events-auto\').remove()">✕</button>' : ''}
-      </div>
-    `;
+            const alertClass = `alert alert-${type} flex items-center shadow-lg`;
+            const alertDiv = document.createElement('div');
+            alertDiv.className = alertClass;
+            alertDiv.innerHTML = `
+            <span class="flex-1">${message}</span>
+            ${closable ? '<button class="btn btn-sm btn-ghost ml-2 flex-shrink-0">✕</button>' : ''}
+        `;
+            toast.appendChild(alertDiv);
             // 关闭处理
             let autoCloseTimer;
             if (duration > 0) {
@@ -612,7 +613,7 @@ var junkman = (function (exports) {
                 }, duration);
             }
             if (closable) {
-                const closeBtn = toast.querySelector('button');
+                const closeBtn = alertDiv.querySelector('button');
                 if (closeBtn) {
                     closeBtn.addEventListener('click', () => {
                         if (autoCloseTimer)

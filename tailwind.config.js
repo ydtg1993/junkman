@@ -3,9 +3,14 @@ module.exports = {
         "./src/**/*.{ts,js,html}",
         "./dist/**/*.html"
     ],
-    theme: {
-        extend: {},
-    },
+    safelist: [
+        // 保留所有 alert 颜色变体
+        'alert-info',
+        'alert-success',
+        'alert-warning',
+        'alert-error',
+        // 如果有需要，也可保留其他动态类
+    ],
     plugins: [
         require('@tailwindcss/forms'),
         require('@tailwindcss/typography'),
