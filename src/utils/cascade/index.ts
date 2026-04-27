@@ -556,7 +556,11 @@ export class CascadeSelector {
             if (target) {
                 target.scrollIntoView({ block: 'center', behavior: 'smooth' });
                 target.classList.add('!bg-yellow-100');
-                setTimeout(() => target.classList.remove('!bg-yellow-100'), 1500);
+                target.style.color = 'black';
+                setTimeout(() => {
+                    target.classList.remove('!bg-yellow-100');
+                    target.style.color = 'unset';
+                }, 1500);
             }
         }
     }
