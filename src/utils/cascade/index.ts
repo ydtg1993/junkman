@@ -62,13 +62,13 @@ export class CascadeSelector {
         this.container.appendChild(selectedArea);
 
         const columnsContainer = document.createElement('div');
-        columnsContainer.className = 'flex overflow-x-auto h-60 gap-1';
+        columnsContainer.className = 'flex overflow-x-auto h-60 gap-1 snap-x snap-mandatory';
         this.container.appendChild(columnsContainer);
 
         this.stacks = [];
         for (let i = 0; i < this.flatData.length; i++) {
             const stackDiv = document.createElement('div');
-            stackDiv.className = 'flex-1 min-w-[130px] overflow-y-auto border-r border-base-200 last:border-r-0';
+            stackDiv.className = 'flex-1 min-w-[120px] max-w-[200px] overflow-y-auto border-r border-base-200 last:border-r-0 snap-start';
             stackDiv.setAttribute('data-stack', i.toString());
             columnsContainer.appendChild(stackDiv);
             this.stacks.push(stackDiv);
@@ -440,6 +440,8 @@ export class CascadeSelector {
 
     // ---------- 选中逻辑 ----------
     private addSelected(node: FlattenedNode) {
+        // 只有叶子节点可以被选中
+        if (node.nodes && node.nodes.length > 0) return;
         if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) {
             this.removeSelected(this.selectedNodes[0].key);
         }
@@ -464,23 +466,36 @@ export class CascadeSelector {
     }
 
     private selectAllChildren(parentNode: FlattenedNode) {
-        const collect = (node: TreeNode): TreeNode[] => {
-            let arr: TreeNode[] = [];
-            if (node.nodes) {
-                node.nodes.forEach(c => {
-                    arr.push(c);
-                    arr.push(...collect(c));
+        // 自动展开当前层级
+        this.expandedParents.length = parentNode.stack;
+        this.expandedParents[parentNode.stack] = String(parentNode.key);
+
+        // 收集所有后代叶子节点
+        const collectLeaves = (node: TreeNode): TreeNode[] => {
+            if (node.nodes && node.nodes.length > 0) {
+                let leaves: TreeNode[] = [];
+                node.nodes.forEach(child => {
+                    leaves = leaves.concat(collectLeaves(child));
                 });
+                return leaves;
             }
-            return arr;
+            return [node];
         };
-        const descendants = collect(parentNode.originalNode);
-        for (const node of descendants) {
-            if (!this.isSelected(node.key)) {
-                if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) break;
-                this.selectedNodes.push(node);
-            }
+        const leafNodes = collectLeaves(parentNode.originalNode);
+
+        // 清空所有已选节点（全选替换）
+        this.selectedNodes = [];
+
+        // 重新添加叶子节点，受 limit 约束
+        for (const leaf of leafNodes) {
+            if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) break;
+            this.selectedNodes.push(leaf);
         }
+
+        if (this.options.limit > 0 && leafNodes.length > 0 && this.selectedNodes.length < Math.min(leafNodes.length, this.options.limit)) {
+            console.warn(`已超出最大选择数量 ${this.options.limit}，仅选中部分子节点`);
+        }
+
         this.refreshAllStacks();
         this.options.onChange(this.selectedNodes);
     }

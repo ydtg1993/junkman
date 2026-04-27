@@ -79,7 +79,7 @@ export class EditableTable {
     private render() {
         this.container.innerHTML = '';
         const wrapper = document.createElement('div');
-        wrapper.className = 'overflow-auto';
+        wrapper.className = 'overflow-x-auto overflow-y-auto';
         wrapper.style.maxHeight = this.options.maxHeight;
         this.tableDom = document.createElement('table');
         let tableCls = 'table table-fixed w-full';
