@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ────────────── 级联树展开图标动画 ────────────── */
 details[open] > summary > .expand-icon {
     transform: rotate(90deg);
 }
@@ -10,9 +11,33 @@ details[open] > summary > .expand-icon {
     transition: transform 0.2s;
 }
 
+/* ────────────── 拖拽占位符样式 ────────────── */
 .sortable-placeholder {
     background: rgba(0, 0, 0, 0.05);
     border: 2px dashed #999;
     border-radius: 6px;
     box-sizing: border-box;
+}
+
+/* ────────────── 全局辅助样式 ────────────── */
+/* 右键菜单防止溢出 */
+.cascade-context-menu {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 拖拽时的幽灵元素禁止交互 */
+.sortable-dragging {
+    touch-action: none;
+    user-select: none;
+}
+
+/* 表格固定列阴影（可选，增强视觉效果） */
+.sticky-left {
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+.sticky-right {
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
 }

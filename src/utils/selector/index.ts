@@ -1,6 +1,6 @@
-import {SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS, SelectorInterface} from "./init";
+import { SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS, SelectorInterface } from "./init";
 
-export class Selector implements SelectorInterface{
+export class Selector implements SelectorInterface {
     protected parentNode: HTMLElement = document.body;
     protected select: { [key: string]: string } = {};
     protected limitNumber!: number;
@@ -9,71 +9,69 @@ export class Selector implements SelectorInterface{
     protected insertData: string[] = [];
     protected deleteData: string[] = [];
     protected searchOff: boolean = false;
-    protected triggerEvent: { func: Function | null; enable: boolean } = {func: null, enable: false};
-    protected SELECT_INPUT_DOM!: HTMLElement | null;
-    protected INSERT_INPUT_DOM!: HTMLElement | null;
-    protected DELETE_INPUT_DOM!: HTMLElement | null;
+    protected triggerEvent: { func: Function | null; enable: boolean } = { func: null, enable: false };
+    protected SELECT_INPUT_DOM: HTMLElement | null = null;
+    protected INSERT_INPUT_DOM: HTMLElement | null = null;
+    protected DELETE_INPUT_DOM: HTMLElement | null = null;
     protected value_line_hash: { [id: string]: number } = {};
 
-    protected towards : SELECTOR_TOWARDS = SELECTOR_TOWARDS.Horizontal;
-
+    protected towards: SELECTOR_TOWARDS = SELECTOR_TOWARDS.Horizontal;
     protected placeholder: string = '-select-';
     protected maxHeight: string = '150px';
-    protected hiddenInput:string|null = null;
+    protected hiddenInput: string | null = null;
     protected direction: SELECTOR_DIRECTION = SELECTOR_DIRECTION.Down;
-    protected show:boolean = false;
-    protected wrap:boolean = false;
+    protected show: boolean = false;
+    protected wrap: boolean = false;
 
-    constructor(select: { [key: string]: string },options:{
-        limit?:number,
-        searchOff?:boolean,
-        trigger?:Function,
-        hiddenInput?:string,
-        direction?:SELECTOR_DIRECTION,
-        towards?:SELECTOR_TOWARDS,
-        placeholder?:string,
-        show?:boolean,
-        wrap?:boolean,
-        menuMaxHeight?:string,
-        parentNode?: HTMLElement
+    constructor(select: { [key: string]: string }, options: {
+        limit?: number;
+        searchOff?: boolean;
+        trigger?: Function;
+        hiddenInput?: string;
+        direction?: SELECTOR_DIRECTION;
+        towards?: SELECTOR_TOWARDS;
+        placeholder?: string;
+        show?: boolean;
+        wrap?: boolean;
+        menuMaxHeight?: string;
+        parentNode?: HTMLElement;
     }) {
         this.select = select;
 
-        if(typeof options.limit === "number"){
+        if (typeof options.limit === "number") {
             this.limitNumber = options.limit;
         }
-        if(typeof options.searchOff === "boolean"){
+        if (typeof options.searchOff === "boolean") {
             this.searchOff = options.searchOff;
         }
-        if(typeof options.trigger === "function"){
-            this.triggerEvent = {func: options.trigger, enable: true};
+        if (typeof options.trigger === "function") {
+            this.triggerEvent = { func: options.trigger, enable: true };
         }
-        if(typeof options.hiddenInput === "string"){
+        if (typeof options.hiddenInput === "string") {
             this.hiddenInput = options.hiddenInput;
         }
-        if(typeof options.placeholder === "string"){
+        if (typeof options.placeholder === "string") {
             this.placeholder = options.placeholder;
         }
-        if(typeof options.show === "boolean"){
+        if (typeof options.show === "boolean") {
             this.show = options.show;
         }
-        if(typeof options.wrap === "boolean"){
+        if (typeof options.wrap === "boolean") {
             this.wrap = options.wrap;
         }
-        if(typeof options.menuMaxHeight === "string"){
+        if (typeof options.menuMaxHeight === "string") {
             this.maxHeight = options.menuMaxHeight;
         }
-        // @ts-ignore
-        if(options.hasOwnProperty('direction') && options.direction in SELECTOR_DIRECTION){
-            // @ts-ignore
+
+        // direction 和 towards 处理保留类型安全
+        if (options.direction !== undefined && Object.values(SELECTOR_DIRECTION).includes(options.direction)) {
             this.direction = options.direction;
         }
-        // @ts-ignore
-        if(options.hasOwnProperty('towards') && options.towards in SELECTOR_TOWARDS){
-            // @ts-ignore
+        if (options.towards !== undefined && Object.values(SELECTOR_TOWARDS).includes(options.towards)) {
             this.towards = options.towards;
         }
-        if(options.parentNode instanceof HTMLElement){
+
+        if (options.parentNode instanceof HTMLElement) {
             this.parentNode = options.parentNode;
         }
     }
@@ -84,20 +82,23 @@ export class Selector implements SelectorInterface{
             return this;
         }
         selected = selected.map(elem => elem.toString());
-        this.selectedData = selected.filter(d => Object.keys(this.select).map(key => this.select[key]).includes(d));
+        this.selectedData = selected.filter(d =>
+            Object.keys(this.select).map(key => this.select[key]).includes(d)
+        );
+
+        // 异步模拟点击更新子类UI（Menu 专用，Switcher 已重写，不会执行）
         (async () => {
-            let options = this.parentNode.querySelectorAll('.dropdown-content li a');
+            const options = this.parentNode.querySelectorAll('.dropdown-content li a');
             if (options.length > 0) {
                 options.forEach((D) => {
                     if (!(D instanceof HTMLElement)) return;
-                    let value = D.getAttribute('data-value') as string;
-                    if (this.selectedData.indexOf(value) !== -1) {
+                    const value = D.getAttribute('data-value') as string;
+                    if (this.selectedData.includes(value)) {
                         this.triggerEvent.enable = false;
                         D.click();
                         this.triggerEvent.enable = true;
                     }
                 });
-                // 关闭下拉
                 const content = this.parentNode.querySelector('.dropdown-content') as HTMLElement;
                 if (content && !this.show) content.classList.add('hidden');
             }
@@ -111,75 +112,82 @@ export class Selector implements SelectorInterface{
             if (index === -1) {
                 this.selectData.push(value);
                 if (this.SELECT_INPUT_DOM instanceof HTMLElement) {
-                    // @ts-ignore
-                    this.SELECT_INPUT_DOM.value = JSON.stringify(this.selectData);
+                    (this.SELECT_INPUT_DOM as HTMLInputElement).value = JSON.stringify(this.selectData);
                 }
             }
-            if (this.selectedData.indexOf(value) === -1 && this.insertData.indexOf(value) === -1) {
+            if (!this.selectedData.includes(value) && !this.insertData.includes(value)) {
                 this.insertData.push(value);
                 if (this.INSERT_INPUT_DOM instanceof HTMLElement) {
-                    // @ts-ignore
-                    this.INSERT_INPUT_DOM.value = JSON.stringify(this.insertData);
+                    (this.INSERT_INPUT_DOM as HTMLInputElement).value = JSON.stringify(this.insertData);
                 }
             }
             index = this.deleteData.indexOf(value);
             if (index !== -1) {
                 this.deleteData.splice(index, 1);
                 if (this.DELETE_INPUT_DOM instanceof HTMLElement) {
-                    // @ts-ignore
-                    this.DELETE_INPUT_DOM.value = JSON.stringify(this.deleteData);
+                    (this.DELETE_INPUT_DOM as HTMLInputElement).value = JSON.stringify(this.deleteData);
                 }
             }
         } else {
             if (index !== -1) {
                 this.selectData.splice(index, 1);
                 if (this.SELECT_INPUT_DOM instanceof HTMLElement) {
-                    // @ts-ignore
-                    this.SELECT_INPUT_DOM.value = JSON.stringify(this.selectData);
+                    (this.SELECT_INPUT_DOM as HTMLInputElement).value = JSON.stringify(this.selectData);
                 }
             }
-            if (this.selectedData.indexOf(value) !== -1 && this.deleteData.indexOf(value) === -1) {
+            if (this.selectedData.includes(value) && !this.deleteData.includes(value)) {
                 this.deleteData.push(value);
                 if (this.DELETE_INPUT_DOM instanceof HTMLElement) {
-                    // @ts-ignore
-                    this.DELETE_INPUT_DOM.value = JSON.stringify(this.deleteData);
+                    (this.DELETE_INPUT_DOM as HTMLInputElement).value = JSON.stringify(this.deleteData);
                 }
             }
             index = this.insertData.indexOf(value);
             if (index !== -1) {
                 this.insertData.splice(index, 1);
                 if (this.INSERT_INPUT_DOM instanceof HTMLElement) {
-                    // @ts-ignore
-                    this.INSERT_INPUT_DOM.value = JSON.stringify(this.insertData);
+                    (this.INSERT_INPUT_DOM as HTMLInputElement).value = JSON.stringify(this.insertData);
                 }
             }
         }
-        if (typeof this.triggerEvent.func == 'function' && this.triggerEvent.enable) {
+
+        if (typeof this.triggerEvent.func === 'function' && this.triggerEvent.enable) {
             this.triggerEvent.func({
-                value:value,
-                operate:operate ,
-                select:this.selectData,
-                insert:this.insertData,
-                delete:this.deleteData});
+                value,
+                operate,
+                select: this.selectData,
+                insert: this.insertData,
+                delete: this.deleteData,
+            });
         }
     }
 
-    protected delayExec(){
-        if(typeof this.hiddenInput === "string"){
+    protected delayExec() {
+        if (typeof this.hiddenInput === "string") {
+            const name = this.hiddenInput;
             this.parentNode.insertAdjacentHTML('beforeend', `
-<input name="${this.hiddenInput}[select]" value="[]" type="hidden" />
-<input name="${this.hiddenInput}[insert]" value="[]" type="hidden" />
-<input name="${this.hiddenInput}[delete]" value="[]" type="hidden" />`);
-            this.SELECT_INPUT_DOM = this.parentNode.querySelector(`input[name='${this.hiddenInput}[select]']`);
-            this.INSERT_INPUT_DOM = this.parentNode.querySelector(`input[name='${this.hiddenInput}[insert]']`);
-            this.DELETE_INPUT_DOM = this.parentNode.querySelector(`input[name='${this.hiddenInput}[delete]']`);
+<input name="${name}[select]" value="[]" type="hidden" />
+<input name="${name}[insert]" value="[]" type="hidden" />
+<input name="${name}[delete]" value="[]" type="hidden" />`);
+            this.SELECT_INPUT_DOM = this.parentNode.querySelector(`input[name='${name}[select]']`);
+            this.INSERT_INPUT_DOM = this.parentNode.querySelector(`input[name='${name}[insert]']`);
+            this.DELETE_INPUT_DOM = this.parentNode.querySelector(`input[name='${name}[delete]']`);
         }
-        if(this.selectedData.length>0){
+        if (this.selectedData.length > 0) {
             this.selected(this.selectedData);
         }
     }
 
-    make():this{
+    make(): this {
         return this;
-    };
+    }
+
+    /**
+     * 清理基类资源（隐藏输入框引用）
+     * 子类应重写此方法并调用 super.destroy()
+     */
+    public destroy() {
+        this.SELECT_INPUT_DOM = null;
+        this.INSERT_INPUT_DOM = null;
+        this.DELETE_INPUT_DOM = null;
+    }
 }

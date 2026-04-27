@@ -34,10 +34,41 @@ export class Sortable {
         this.list.addEventListener('pointerdown', this.onStart);
     }
 
+    // ──────────────────────── 元素类型判断 ────────────────────────
     private getItemType(el: HTMLElement): 'row' | 'block' {
         return el.tagName === 'TR' ? 'row' : 'block';
     }
 
+    private isVertical(): boolean {
+        return this.options.direction === 'vertical';
+    }
+
+    private getPoint(e: PointerEvent): number {
+        return this.isVertical() ? e.clientY : e.clientX;
+    }
+
+    private getPrimarySize(el: HTMLElement): number {
+        const rect = el.getBoundingClientRect();
+        return this.isVertical() ? rect.height : rect.width;
+    }
+
+    private getPrimaryClientPos(el: HTMLElement): number {
+        const rect = el.getBoundingClientRect();
+        return this.isVertical() ? rect.top : rect.left;
+    }
+
+    private getItems(): HTMLElement[] {
+        return Array.from(this.list.querySelectorAll<HTMLElement>('[data-sortable-item]'))
+            .filter(el => el !== this.placeholder && el !== this.dragItem);
+    }
+
+    // 获取所有项（包含当前拖拽项），用于计算初始索引
+    private getAllItems(): HTMLElement[] {
+        return Array.from(this.list.querySelectorAll<HTMLElement>('[data-sortable-item]'))
+            .filter(el => el !== this.placeholder);
+    }
+
+    // ──────────────────────── 占位符与克隆 ────────────────────────
     private createPlaceholder(item: HTMLElement): HTMLElement {
         const type = this.getItemType(item);
         if (type === 'row') {
@@ -77,10 +108,11 @@ export class Sortable {
         clone.style.boxSizing = 'border-box';
 
         const bgColor = window.getComputedStyle(src).backgroundColor;
-        clone.style.backgroundColor = bgColor !== 'rgba(0, 0, 0, 0)' ? bgColor : '#fff';
+        clone.style.backgroundColor = bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent' ? bgColor : '#fff';
         clone.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
         clone.style.opacity = '0.95';
 
+        // 处理表格行的克隆
         if (src.tagName === 'TR') {
             clone.style.display = 'flex';
             clone.style.flexDirection = 'row';
@@ -97,59 +129,38 @@ export class Sortable {
                 cloneCells[idx].style.whiteSpace = computed.whiteSpace;
                 cloneCells[idx].style.backgroundColor = bgColor;
             });
-        } else {
-            clone.style.width = `${rect.width}px`;
         }
         return clone;
     }
 
-    private getItems(): HTMLElement[] {
-        // 获取所有可拖拽项，排除占位符和当前隐藏的拖拽项
-        return Array.from(this.list.querySelectorAll('[data-sortable-item]'))
-            .filter(el => el !== this.placeholder && el !== this.dragItem) as HTMLElement[];
-    }
-
-    private isVertical(): boolean {
-        return this.options.direction === 'vertical';
-    }
-
-    private getPoint(e: PointerEvent): number {
-        return this.isVertical() ? e.clientY : e.clientX;
-    }
-
-    private getPrimarySize(el: HTMLElement): number {
-        const rect = el.getBoundingClientRect();
-        return this.isVertical() ? rect.height : rect.width;
-    }
-
-    private getPrimaryClientPos(el: HTMLElement): number {
-        const rect = el.getBoundingClientRect();
-        return this.isVertical() ? rect.top : rect.left;
-    }
-
+    // ──────────────────────── 拖拽生命周期 ────────────────────────
     private onStart = (e: PointerEvent) => {
-        // 防止重复拖拽
         if (this.dragging) return;
 
-        // 使用 closest 直接获取拖拽项（更可靠）
-        let target = e.target as HTMLElement;
+        // 确定拖拽目标
         let item: HTMLElement | null = null;
         if (this.options.handle) {
-            const handle = target.closest(this.options.handle);
-            if (handle) {
-                item = handle.closest('[data-sortable-item]');
+            const handleEl = (e.target as HTMLElement).closest(this.options.handle);
+            if (handleEl) {
+                item = handleEl.closest('[data-sortable-item]');
             }
         } else {
-            item = target.closest('[data-sortable-item]');
+            item = (e.target as HTMLElement).closest('[data-sortable-item]');
         }
         if (!item) return;
 
-        // 阻止默认行为，防止选中文本
+        // 防止干扰输入框
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
         e.preventDefault();
         document.body.style.userSelect = 'none';
 
         this.dragItem = item;
-        this.startIndex = this.getItems().indexOf(item);
+        // 获取所有项（此时占位符尚未创建，dragItem 仍在列表中）
+        const allItems = this.getAllItems();
+        this.startIndex = allItems.indexOf(item);
+
         const rect = item.getBoundingClientRect();
         this.dragOffset = {
             x: e.clientX - rect.left,
@@ -158,17 +169,16 @@ export class Sortable {
         this.startScrollTop = this.list.scrollTop;
         this.startScrollLeft = this.list.scrollLeft;
 
-        // 创建占位符
+        // 创建占位符并插入到原位置
         this.placeholder = this.createPlaceholder(item);
         item.parentNode!.insertBefore(this.placeholder, item);
 
-        // 创建克隆体并添加到 body
+        // 创建拖拽幽灵
         this.clone = this.cloneWithLayout(item, rect);
         document.body.appendChild(this.clone);
+        this.clone.getBoundingClientRect(); // 强制重排
 
-        // 强制渲染克隆体
-        this.clone.getBoundingClientRect();
-        // 隐藏原元素（不占位）
+        // 隐藏原元素
         item.style.display = 'none';
 
         this.dragging = true;
@@ -185,6 +195,7 @@ export class Sortable {
         let newTop = e.clientY - this.dragOffset.y;
         newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - this.clone.offsetWidth));
         newTop = Math.max(0, Math.min(newTop, window.innerHeight - this.clone.offsetHeight));
+
         this.clone.style.left = `${newLeft}px`;
         this.clone.style.top = `${newTop}px`;
 
@@ -199,20 +210,16 @@ export class Sortable {
 
         if (this.isVertical()) {
             const mouseY = e.clientY;
-            const distanceToTop = mouseY - rect.top;
-            const distanceToBottom = rect.bottom - mouseY;
-            if (distanceToTop < edgeThreshold && distanceToTop > 0) {
+            if (mouseY - rect.top < edgeThreshold && mouseY - rect.top > 0) {
                 this.list.scrollTop -= scrollSpeed;
-            } else if (distanceToBottom < edgeThreshold && distanceToBottom > 0) {
+            } else if (rect.bottom - mouseY < edgeThreshold && rect.bottom - mouseY > 0) {
                 this.list.scrollTop += scrollSpeed;
             }
         } else {
             const mouseX = e.clientX;
-            const distanceToLeft = mouseX - rect.left;
-            const distanceToRight = rect.right - mouseX;
-            if (distanceToLeft < edgeThreshold && distanceToLeft > 0) {
+            if (mouseX - rect.left < edgeThreshold && mouseX - rect.left > 0) {
                 this.list.scrollLeft -= scrollSpeed;
-            } else if (distanceToRight < edgeThreshold && distanceToRight > 0) {
+            } else if (rect.right - mouseX < edgeThreshold && rect.right - mouseX > 0) {
                 this.list.scrollLeft += scrollSpeed;
             }
         }
@@ -229,9 +236,7 @@ export class Sortable {
         const firstItem = items[0];
         if (!lastItem) return;
 
-        const lastItemPos = this.getPrimaryClientPos(lastItem);
-        const lastItemSize = this.getPrimarySize(lastItem);
-        const lastItemEnd = lastItemPos + lastItemSize;
+        const lastItemEnd = this.getPrimaryClientPos(lastItem) + this.getPrimarySize(lastItem);
         const firstItemPos = this.getPrimaryClientPos(firstItem);
 
         if (mousePos > lastItemEnd) {
@@ -243,11 +248,9 @@ export class Sortable {
         } else {
             let minDist = Infinity;
             for (const el of items) {
-                // 跳过当前拖拽项（它已被隐藏，理论上不在 items 中，但以防万一）
                 if (el === this.dragItem) continue;
                 const elPos = this.getPrimaryClientPos(el);
-                const elSize = this.getPrimarySize(el);
-                const center = elPos + elSize / 2;
+                const center = elPos + this.getPrimarySize(el) / 2;
                 const dist = Math.abs(mousePos - center);
                 if (dist < minDist) {
                     minDist = dist;
@@ -260,7 +263,7 @@ export class Sortable {
         if (targetItem && this.placeholder) {
             this.list.insertBefore(
                 this.placeholder,
-                insertAfter ? targetItem.nextSibling : targetItem
+                insertAfter ? targetItem.nextSibling : targetItem,
             );
         }
     }
@@ -279,18 +282,19 @@ export class Sortable {
             this.clone = null;
         }
 
-        // 恢复原元素显示
+        // 恢复原元素
         this.dragItem.style.display = '';
         // 将原元素移动到占位符位置
-        this.list.insertBefore(this.dragItem, this.placeholder);
+        this.placeholder.parentNode?.insertBefore(this.dragItem, this.placeholder);
         this.placeholder.remove();
+        this.placeholder = null;
 
-        // 触发排序回调
+        // 收集新的顺序
         const order: (string | number)[] = [];
-        const currentItems = this.getItems();
-        currentItems.forEach(el => {
+        const currentItems = this.getAllItems(); // 此时 dragItem 已回到列表
+        currentItems.forEach((el, idx) => {
             const id = el.dataset.id;
-            order.push(id !== undefined ? id : currentItems.indexOf(el));
+            order.push(id !== undefined ? id : idx);
         });
         this.options.onSort(order);
 
@@ -298,17 +302,31 @@ export class Sortable {
     };
 
     private cleanup() {
-        this.dragItem = null;
-        this.placeholder = null;
-        this.clone = null;
         this.dragging = false;
+        this.dragItem = null;
+        this.placeholder?.remove();
+        this.placeholder = null;
+        this.clone?.remove();
+        this.clone = null;
         document.body.style.userSelect = '';
     }
 
+    // ──────────────────────── 公共方法 ────────────────────────
     public destroy() {
         window.removeEventListener('pointermove', this.onMove);
         window.removeEventListener('pointerup', this.onEnd);
         this.list.removeEventListener('pointerdown', this.onStart);
-        this.cleanup();
+        // 确保残留的占位符和克隆被移除
+        if (this.placeholder) {
+            this.placeholder.remove();
+            this.placeholder = null;
+        }
+        if (this.clone) {
+            this.clone.remove();
+            this.clone = null;
+        }
+        document.body.style.userSelect = '';
+        this.dragging = false;
+        this.dragItem = null;
     }
 }

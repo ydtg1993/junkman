@@ -1,14 +1,15 @@
 import { dimensionalTree, FlattenedNode, TreeNode } from '../../aid/tree';
 import { request } from '../../aid/request';
-import { contextmenu } from '../../aid/contextmenu';
 import { CascadeTreeOptions } from './types';
 import { Modal } from '../modal/index';
 import { Icon } from '../../aid/icon';
 import { generateUniqueString } from '../../aid/random';
+import { GlobalEventManager } from '../../aid/eventmanager';
+import { TreeDragDrop } from './tree-dragdrop';
 
 export class CascadeTree {
     protected container: HTMLElement;
-    protected options: CascadeTreeOptions;            // 改为非 Required
+    protected options: CascadeTreeOptions;
     protected data: TreeNode[];
     protected flatData: FlattenedNode[][] = [];
     protected stacks: HTMLElement[] = [];
@@ -19,17 +20,18 @@ export class CascadeTree {
     protected expandedParents: (string | undefined)[] = [];
 
     private callbacks: Partial<Pick<CascadeTreeOptions, 'onInsert' | 'onUpdate' | 'onDelete' | 'onMigrate' | 'onExchange'>>;
+    private globalEvents = new GlobalEventManager();
+    private treeDragDrop?: TreeDragDrop;
 
     constructor(selector: string | HTMLElement, data: TreeNode[], options: CascadeTreeOptions) {
         this.container = typeof selector === 'string' ? document.querySelector(selector) as HTMLElement : selector;
         if (!this.container) throw new Error('Container element not found');
         this.data = data;
 
-        // 设置默认值，解决可选属性缺失问题
         this.options = {
             searchable: true,
             parentNode: document.body,
-            formRenderer: undefined,        // 可选
+            formRenderer: undefined,
             ...options,
         };
 
@@ -44,19 +46,32 @@ export class CascadeTree {
         this.init();
     }
 
-    // ---------- 初始化 ----------
     private init() {
         this.flatData = dimensionalTree(this.data);
         this.render();
         this.bindEvents();
+        if (this.options.draggable) {
+            this.treeDragDrop = new TreeDragDrop({
+                container: this.container,
+                getFlattenedNodes: () => this.data,
+                onDragEnd: async (dragged, target, position) => {
+                    if (this.options.onDragEnd) {
+                        const success = await this.options.onDragEnd(dragged, target, position);
+                        if (success) await this.refreshData();
+                    } else {
+                        this.moveNode(dragged, target, position);
+                        await this.refreshData();
+                    }
+                }
+            });
+        }
     }
 
-    // ---------- 界面渲染（无选择区域）----------
     private render() {
         this.container.innerHTML = '';
         this.container.className = 'flex flex-col gap-2 bg-base-100 p-2 rounded-lg border border-base-300 relative';
         this.container.addEventListener('contextmenu', (e) => e.preventDefault());
-        // 搜索框
+
         if (this.options.searchable !== false) {
             const input = document.createElement('input');
             input.type = 'text';
@@ -66,12 +81,10 @@ export class CascadeTree {
             this.searchInput = input;
         }
 
-        // 列容器
         const columnsContainer = document.createElement('div');
         columnsContainer.className = 'flex overflow-x-auto h-60 gap-1';
         this.container.appendChild(columnsContainer);
 
-        // 生成所有列
         this.stacks = [];
         for (let i = 0; i < this.flatData.length; i++) {
             const stackDiv = document.createElement('div');
@@ -83,7 +96,6 @@ export class CascadeTree {
         }
     }
 
-    // 渲染某一列（无选中标记）
     protected renderStack(stackLevel: number) {
         const stackDiv = this.stacks[stackLevel];
         if (!stackDiv) return;
@@ -99,7 +111,7 @@ export class CascadeTree {
             const li = document.createElement('li');
             if (stackLevel > 0) li.classList.add('hidden');
 
-            const hasChildren = node.nodes && node.nodes.length > 0;
+            const hasChildren = (node.nodes && node.nodes.length > 0) || !!this.options.loadChildren;
 
             const a = document.createElement('a');
             a.className = 'flex items-center justify-between py-1.5 px-2 hover:bg-base-200 cursor-pointer rounded';
@@ -127,14 +139,14 @@ export class CascadeTree {
             left.appendChild(textSpan);
             a.appendChild(left);
 
-            // --- 新增：右键菜单绑定（仅在此节点上）---
             a.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const menuItems = [];
-                menuItems.push({ title: '新增子节点', func: () => this.insertChild(node) });
-                menuItems.push({ title: '修改名称', func: () => this.updateNode(node) });
-                menuItems.push({ title: '删除节点', func: () => this.deleteNode(node) });
+                const menuItems = [
+                    { title: '新增子节点', func: () => this.insertChild(node) },
+                    { title: '修改名称', func: () => this.updateNode(node) },
+                    { title: '删除节点', func: () => this.deleteNode(node) },
+                ];
                 if (node.parentNodes.length > 0) {
                     menuItems.push({ title: '迁移到根', func: () => this.migrateToRoot(node) });
                 }
@@ -148,9 +160,7 @@ export class CascadeTree {
         stackDiv.appendChild(ul);
     }
 
-    // 自定义右键菜单（绝对定位，点击外部关闭）
     private showContextMenu(anchor: HTMLElement, items: { title: string; func: () => void }[], event: MouseEvent) {
-        // 移除已存在的菜单
         const existing = document.querySelector('.cascade-context-menu');
         if (existing) existing.remove();
 
@@ -178,17 +188,12 @@ export class CascadeTree {
         const closeHandler = (e: MouseEvent) => {
             if (!menu.contains(e.target as Node)) {
                 menu.remove();
-                document.removeEventListener('click', closeHandler);
-                document.removeEventListener('contextmenu', closeHandler);
             }
         };
-        setTimeout(() => {
-            document.addEventListener('click', closeHandler);
-            document.addEventListener('contextmenu', closeHandler);
-        }, 0);
+        this.globalEvents.add(document, 'click', closeHandler);
+        this.globalEvents.add(document, 'contextmenu', closeHandler);
     }
 
-    // 刷新所有列（保留展开状态）
     private refreshAllStacks() {
         const oldExpanded = [...this.expandedParents];
         for (let i = 0; i < this.flatData.length; i++) {
@@ -205,10 +210,26 @@ export class CascadeTree {
         }
     }
 
-    // ---------- 展开/收起逻辑 ----------
-    private expandToNextLevel(currentLevel: number, parentNode: FlattenedNode) {
+    private async expandToNextLevel(currentLevel: number, parentNode: FlattenedNode) {
+        // 先设置展开状态，以便 rebuildStacks 时能恢复
         this.expandedParents[currentLevel] = String(parentNode.key);
         this.expandedParents.length = currentLevel + 1;
+
+        const node = parentNode.originalNode;
+        if ((!node.nodes || node.nodes.length === 0) && this.options.loadChildren) {
+            const expandIcon = this.getExpandIconElement(currentLevel, node.key);
+            if (expandIcon) expandIcon.innerHTML = Icon.sub_loading;
+            try {
+                const children = await this.options.loadChildren(node);
+                node.nodes = children;
+                this.flatData = dimensionalTree(this.data);
+                this.rebuildStacks(); // 会保留 expandedParents 并应用展开
+            } catch (e) {
+                console.error('加载子节点失败', e);
+            }
+            if (expandIcon) expandIcon.innerHTML = Icon.caret_right;
+            return;
+        }
 
         const nextLevel = currentLevel + 1;
         if (nextLevel >= this.flatData.length) {
@@ -221,6 +242,13 @@ export class CascadeTree {
         }
         this.applyExpand(currentLevel, parentNode);
         this.applyPathHighlight(currentLevel, parentNode);
+    }
+
+    private getExpandIconElement(stackLevel: number, key: string | number): HTMLElement | null {
+        const stackDiv = this.stacks[stackLevel];
+        if (!stackDiv) return null;
+        const a = stackDiv.querySelector(`a[data-key="${String(key)}"]`) as HTMLElement;
+        return a ? a.querySelector('.expand-icon') : null;
     }
 
     private applyExpand(currentLevel: number, parentNode: FlattenedNode) {
@@ -334,7 +362,6 @@ export class CascadeTree {
         }
     }
 
-    // ---------- 搜索（仅导航）----------
     private handleSearch(keyword: string) {
         if (this.searchDropdown) {
             this.searchDropdown.remove();
@@ -399,12 +426,20 @@ export class CascadeTree {
         }
     }
 
-    // ---------- 事件绑定 ----------
     private bindEvents() {
         const columnsContainer = this.container.lastChild as HTMLElement;
         if (!columnsContainer) return;
 
-        // 单击：展开/收起
+        // 搜索关闭全局事件（仅绑定一次）
+        this.globalEvents.add(document, 'click', (e: MouseEvent) => {
+            if (this.searchDropdown &&
+                !this.searchInput?.contains(e.target as Node) &&
+                !this.searchDropdown.contains(e.target as Node)) {
+                this.searchDropdown.remove();
+                this.searchDropdown = null;
+            }
+        });
+
         columnsContainer.addEventListener('click', (e) => {
             const a = (e.target as HTMLElement).closest('a[data-key]') as HTMLElement;
             if (!a) return;
@@ -423,7 +458,6 @@ export class CascadeTree {
             }
         });
 
-        // 搜索输入
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => {
                 if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
@@ -436,16 +470,10 @@ export class CascadeTree {
                     this.handleSearch(this.searchInput!.value.trim());
                 }
             });
-            document.addEventListener('click', (e) => {
-                if (this.searchDropdown && !this.searchInput?.contains(e.target as Node) && !this.searchDropdown.contains(e.target as Node)) {
-                    this.searchDropdown.remove();
-                    this.searchDropdown = null;
-                }
-            });
         }
     }
 
-    // ---------- 模态对话框（手动绑定事件）----------
+    // ---------- 模态对话框 ----------
     private showModal(content: HTMLElement, title: string): Promise<any> {
         return new Promise((resolve) => {
             const modal = new Modal({
@@ -455,7 +483,7 @@ export class CascadeTree {
                 aspect: { width: '90%', height: 'auto' },
             });
             modal.setContent(content);
-            modal.make();          // 先构建 DOM
+            modal.make();
 
             const modalNode = modal.getNode();
             if (!modalNode) {
@@ -463,7 +491,6 @@ export class CascadeTree {
                 return;
             }
 
-            // 关闭按钮
             const closeBtn = modalNode.querySelector('.btn-circle');
             if (closeBtn) {
                 closeBtn.addEventListener('click', () => {
@@ -472,7 +499,6 @@ export class CascadeTree {
                 });
             }
 
-            // 点击遮罩关闭
             modalNode.addEventListener('click', (e) => {
                 if (e.target === modalNode) {
                     resolve(null);
@@ -480,7 +506,6 @@ export class CascadeTree {
                 }
             });
 
-            // 表单提交
             const form = modalNode.querySelector('form') as HTMLFormElement;
             if (form) {
                 form.addEventListener('submit', (e) => {
@@ -492,7 +517,6 @@ export class CascadeTree {
                     modal.close();
                 });
             } else {
-                // 无表单（如自定义删除确认），视为确认操作
                 resolve({});
                 modal.close();
             }
@@ -521,13 +545,11 @@ export class CascadeTree {
       `;
         } else if (type === 'exchange') {
             form.className = 'flex flex-col gap-2';
-            // 用于提交的隐藏域
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
             hiddenInput.name = 'targetKey';
             form.appendChild(hiddenInput);
 
-            // 外层容器
             const container = document.createElement('div');
             container.className = 'flex flex-col gap-1 relative';
 
@@ -536,23 +558,19 @@ export class CascadeTree {
             label.textContent = '目标节点';
             container.appendChild(label);
 
-            // 搜索输入框（仅用于显示选中名称和检索）
             const searchInput = document.createElement('input');
             searchInput.type = 'text';
             searchInput.className = 'input input-bordered input-sm w-full';
             searchInput.placeholder = '输入名称搜索...';
             container.appendChild(searchInput);
 
-            // 下拉列表容器（初始隐藏）
             const dropdown = document.createElement('div');
             dropdown.className = 'hidden absolute top-full left-0 right-0 z-50 bg-base-100 border rounded shadow-lg max-h-40 overflow-y-auto mt-1';
             container.appendChild(dropdown);
 
             form.appendChild(container);
 
-            // 事件绑定：搜索并展示匹配节点（排除当前节点）
             if (node) {
-                // 扁平化整个树到一个数组（便于搜索）排除自身
                 const allNodes = this.getAllNodes(this.data).filter(n => n.key != node.key);
 
                 searchInput.addEventListener('input', () => {
@@ -572,8 +590,8 @@ export class CascadeTree {
                         item.className = 'px-2 py-1 hover:bg-base-200 cursor-pointer text-sm';
                         item.textContent = m.val;
                         item.addEventListener('click', () => {
-                            searchInput.value = m.val;           // 显示名称
-                            hiddenInput.value = String(m.key);    // 设置真实 Key
+                            searchInput.value = m.val;
+                            hiddenInput.value = String(m.key);
                             dropdown.classList.add('hidden');
                         });
                         dropdown.appendChild(item);
@@ -581,15 +599,14 @@ export class CascadeTree {
                     dropdown.classList.remove('hidden');
                 });
 
-                // 点击外部关闭下拉
-                document.addEventListener('click', (e) => {
+                // 使用全局事件管理器，避免泄漏（destroy 时会统一移除）
+                this.globalEvents.add(document, 'click', (e) => {
                     if (!container.contains(e.target as Node)) {
                         dropdown.classList.add('hidden');
                     }
                 });
             }
 
-            // 提交按钮
             const submitBtn = document.createElement('button');
             submitBtn.type = 'submit';
             submitBtn.className = 'btn btn-sm btn-secondary mt-2';
@@ -618,7 +635,7 @@ export class CascadeTree {
         return this.defaultFormContent(node, type, context);
     }
 
-    // ---------- CRUD 操作 ----------
+    // ---------- CRUD ----------
     private async insertChild(parentNode: FlattenedNode) {
         const form = this.getFormContent(parentNode.originalNode, 'insert', { parent: parentNode.originalNode });
         const result = await this.showModal(form, '新增节点');
@@ -630,7 +647,7 @@ export class CascadeTree {
         } else {
             try {
                 await request({
-                    url: this.options.apiUrl,
+                    url: this.options.apiUrl!,
                     method: 'POST',
                     data: { parent_id: parentNode.originalNode.key, val: result.val, ...result }
                 });
@@ -733,10 +750,41 @@ export class CascadeTree {
         if (success) await this.refreshData();
     }
 
-    // ---------- 数据刷新 ----------
+    // ---------- 节点移动 ----------
+    private moveNode(dragged: TreeNode, target: TreeNode, position: 'before' | 'after' | 'inside') {
+        this.removeNodeFromTree(this.data, dragged);
+        if (position === 'inside') {
+            if (!target.nodes) target.nodes = [];
+            target.nodes.push(dragged);
+        } else {
+            this.insertNodeAdjacent(this.data, target, dragged, position);
+        }
+    }
+
+    private removeNodeFromTree(nodes: TreeNode[], node: TreeNode) {
+        for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i].key === node.key) {
+                nodes.splice(i, 1);
+                return;
+            }
+            if (nodes[i].nodes) this.removeNodeFromTree(nodes[i].nodes!, node);
+        }
+    }
+
+    private insertNodeAdjacent(nodes: TreeNode[], target: TreeNode, newNode: TreeNode, position: 'before' | 'after') {
+        for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i].key === target.key) {
+                if (position === 'before') nodes.splice(i, 0, newNode);
+                else nodes.splice(i + 1, 0, newNode);
+                return;
+            }
+            if (nodes[i].nodes) this.insertNodeAdjacent(nodes[i].nodes!, target, newNode, position);
+        }
+    }
+
     private async refreshData() {
         try {
-            const response = await request({ url: this.options.apiUrl, method: 'GET' });
+            const response = await request({ url: this.options.apiUrl!, method: 'GET' });
             const newData = Array.isArray(response) ? response : response.data || response;
             if (Array.isArray(newData)) {
                 this.data = newData;
@@ -748,7 +796,6 @@ export class CascadeTree {
         }
     }
 
-    // ---------- 工具方法 ----------
     private findNodeByKey(key: string | number, nodes: TreeNode[] = this.data): TreeNode | null {
         for (const node of nodes) {
             if (node.key == key) return node;
@@ -768,5 +815,12 @@ export class CascadeTree {
         this.data = data;
         this.flatData = dimensionalTree(data);
         this.rebuildStacks();
+    }
+
+    public destroy() {
+        this.treeDragDrop?.destroy();
+        this.globalEvents.removeAll();
+        if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+        this.container.innerHTML = '';
     }
 }

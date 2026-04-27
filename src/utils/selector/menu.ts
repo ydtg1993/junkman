@@ -1,14 +1,19 @@
 import { Selector } from "./index";
-import { SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS, SelectorInterface } from "./init";
+import { SELECTOR_DIRECTION, SELECTOR_MODE, SelectorInterface } from "./init";
 import { Icon } from "../../aid/icon";
 import { createDOMFromTree } from "../../aid/dombuilder";
+import { GlobalEventManager } from "../../aid/eventmanager";
 
 export class Menu extends Selector implements SelectorInterface {
+    private globalEvents = new GlobalEventManager();
+    private dropdownWrapper: HTMLElement | null = null;
+    private searchTimer: number | null = null;
+
     private _selectedInputShow(selectedDom: HTMLElement) {
-        let names: string[] = [];
+        const names: string[] = [];
         this.selectData.forEach((d) => {
-            let name = Object.keys(this.select).find(key => this.select[key] === d) as string;
-            names.push(name);
+            const name = Object.keys(this.select).find(key => this.select[key] === d);
+            if (name) names.push(name);
         });
         selectedDom.innerHTML = '';
         if (this.limitNumber === 1) {
@@ -18,7 +23,7 @@ export class Menu extends Selector implements SelectorInterface {
             selectedDom.appendChild(span);
             return;
         }
-        for (let name of names) {
+        for (const name of names) {
             const span = document.createElement('span');
             span.className = 'badge badge-sm bg-base-300 text-base-content mx-0.5 truncate';
             span.textContent = name;
@@ -27,51 +32,49 @@ export class Menu extends Selector implements SelectorInterface {
         }
     }
 
-    private _buildOptions(): {}[] {
-        let tree = [];
+    private _buildOptions(): Record<string, any>[] {
+        const tree: Record<string, any>[] = [];
+        const select = this.select;
         let line = 0;
-        let select = this.select;
-        for (let name in select) {
-            if (!select.hasOwnProperty(name)) continue;
-            this.value_line_hash[select[name]] = line;
+        for (const [name, value] of Object.entries(select)) {
+            this.value_line_hash[value] = line;
             line++;
             tree.push({
                 tag: 'li',
                 nodes: [{
                     tag: 'a',
                     textContent: name,
-                    attributes: { 'data-name': name, 'data-value': select[name] },
-                }]
+                    attributes: { 'data-name': name, 'data-value': value },
+                }],
             });
         }
         return tree;
     }
 
-    private _buildSearchInput(): {} {
+    private _buildSearchInput(): Record<string, any> {
         return {
             tag: 'input',
             className: 'input input-bordered input-xs w-full',
             attributes: { placeholder: 'Search' },
             events: {
                 input: (e: Event, dom: HTMLElement) => {
-                    let keywords = (dom as HTMLInputElement).value;
-                    let options: NodeListOf<HTMLElement> = this.parentNode.querySelectorAll('.dropdown-content li a');
+                    const keywords = (dom as HTMLInputElement).value;
+                    const options: NodeListOf<HTMLElement> = this.parentNode.querySelectorAll('.dropdown-content li a');
                     if (!keywords) {
                         options.forEach((a) => (a.parentElement as HTMLElement).classList.remove('hidden'));
                         return;
                     }
-                    setTimeout(() => {
+                    if (this.searchTimer) clearTimeout(this.searchTimer);
+                    this.searchTimer = window.setTimeout(() => {
                         options.forEach((a) => {
-                            let text = a.getAttribute('data-name') || '';
-                            if (keywords.indexOf(text) !== -1 || text.indexOf(keywords) !== -1) {
-                                (a.parentElement as HTMLElement).classList.remove('hidden');
-                            } else {
-                                (a.parentElement as HTMLElement).classList.add('hidden');
-                            }
+                            const text = a.getAttribute('data-name') || '';
+                            const match = text.toLowerCase().includes(keywords.toLowerCase());
+                            (a.parentElement as HTMLElement).classList.toggle('hidden', !match);
                         });
+                        this.searchTimer = null;
                     }, 300);
-                }
-            }
+                },
+            },
         };
     }
 
@@ -91,6 +94,7 @@ export class Menu extends Selector implements SelectorInterface {
 
         const dropdownWrapper = document.createElement('div');
         dropdownWrapper.className = `dropdown ${dirClass} w-full`;
+        this.dropdownWrapper = dropdownWrapper;  // 保存引用，便于销毁
 
         const trigger = document.createElement('label');
         trigger.tabIndex = 0;
@@ -145,7 +149,7 @@ export class Menu extends Selector implements SelectorInterface {
                         this.triggerEvent.enable = true;
                     }
                     a.setAttribute('active', '1');
-                    a.insertAdjacentHTML('beforeend', '<span class="check-icon">' + Icon.check + '</span>');
+                    a.insertAdjacentHTML('beforeend', `<span class="check-icon">${Icon.check}</span>`);
                     this._selectedInputShow(selectedArea);
                 }
             });
@@ -164,11 +168,11 @@ export class Menu extends Selector implements SelectorInterface {
         });
 
         const closeDropdown = (e: MouseEvent) => {
-            if (!dropdownWrapper.contains(e.target as Node)) {
+            if (this.dropdownWrapper && !this.dropdownWrapper.contains(e.target as Node)) {
                 dropdownContent.classList.add('hidden');
             }
         };
-        document.addEventListener('click', closeDropdown);
+        this.globalEvents.add(document, 'click', closeDropdown);
 
         (async () => {
             this.delayExec();
@@ -178,5 +182,20 @@ export class Menu extends Selector implements SelectorInterface {
         })();
 
         return this;
+    }
+
+    public destroy() {
+        // 清除搜索定时器
+        if (this.searchTimer) {
+            clearTimeout(this.searchTimer);
+            this.searchTimer = null;
+        }
+        // 移除全局事件
+        this.globalEvents.removeAll();
+        // 移除 DOM（精确移除自身创建的 dropdown 容器）
+        if (this.dropdownWrapper && this.dropdownWrapper.parentNode) {
+            this.dropdownWrapper.parentNode.removeChild(this.dropdownWrapper);
+            this.dropdownWrapper = null;
+        }
     }
 }

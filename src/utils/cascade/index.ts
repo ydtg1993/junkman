@@ -2,10 +2,15 @@ import { dimensionalTree, FlattenedNode, TreeNode } from '../../aid/tree';
 import { Icon } from '../../aid/icon';
 import { generateUniqueString } from '../../aid/random';
 import { CascadeOptions } from './types';
+import { GlobalEventManager } from '../../aid/eventmanager';
+
+type ResolvedCascadeOptions = Required<Omit<CascadeOptions, 'loadChildren'>> & {
+    loadChildren?: CascadeOptions['loadChildren'];
+};
 
 export class CascadeSelector {
     protected container: HTMLElement;
-    protected options: Required<CascadeOptions>;
+    protected options: ResolvedCascadeOptions;
     protected data: TreeNode[];
     protected flatData: FlattenedNode[][] = [];
     protected stacks: HTMLElement[] = [];
@@ -14,8 +19,8 @@ export class CascadeSelector {
     protected searchDropdown: HTMLElement | null = null;
     protected searchDebounceTimer: number | null = null;
     protected uniqueId: string;
-
     private expandedParents: (string | undefined)[] = [];
+    private globalEvents = new GlobalEventManager();
 
     constructor(selector: string | HTMLElement, data: TreeNode[], options: CascadeOptions = {}) {
         this.container = typeof selector === 'string' ? document.querySelector(selector) as HTMLElement : selector;
@@ -28,6 +33,7 @@ export class CascadeSelector {
             selectedKeys: [],
             parentNode: document.body,
             onChange: () => { },
+            loadChildren: options.loadChildren,
             ...options,
         };
         this.uniqueId = generateUniqueString(6);
@@ -130,7 +136,7 @@ export class CascadeSelector {
                 a.appendChild(mark);
             }
 
-            // ---------- 自定义右键菜单绑定（仅在有子节点时）----------
+            // 右键菜单绑定（仅在有子节点时）
             if (hasChildren) {
                 a.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
@@ -148,15 +154,11 @@ export class CascadeSelector {
         stackDiv.appendChild(ul);
     }
 
-    /**
-     * 自定义右键菜单（绝对定位，点击外部自动关闭）
-     */
     private showContextMenu(
         anchor: HTMLElement,
         items: { title: string; func: () => void }[],
         event: MouseEvent
     ) {
-        // 移除已存在的菜单
         const existing = document.querySelector('.cascade-context-menu');
         if (existing) existing.remove();
 
@@ -184,14 +186,10 @@ export class CascadeSelector {
         const closeHandler = (e: MouseEvent) => {
             if (!menu.contains(e.target as Node)) {
                 menu.remove();
-                document.removeEventListener('click', closeHandler);
-                document.removeEventListener('contextmenu', closeHandler);
             }
         };
-        setTimeout(() => {
-            document.addEventListener('click', closeHandler);
-            document.addEventListener('contextmenu', closeHandler);
-        }, 0);
+        this.globalEvents.add(document, 'click', closeHandler);
+        this.globalEvents.add(document, 'contextmenu', closeHandler);
     }
 
     private hasAnySelectedDescendant(node: FlattenedNode): boolean {
@@ -260,7 +258,19 @@ export class CascadeSelector {
         const columnsContainer = this.container.lastChild as HTMLElement;
         if (!columnsContainer) return;
 
-        // 单击事件：展开/收起 或 选中/取消选中（保持不变）
+        // 全局搜索下拉关闭（仅绑定一次）
+        if (this.options.searchable) {
+            this.globalEvents.add(document, 'click', (e: MouseEvent) => {
+                if (this.searchDropdown &&
+                    !this.searchInput?.contains(e.target as Node) &&
+                    !this.searchDropdown.contains(e.target as Node)) {
+                    this.searchDropdown.remove();
+                    this.searchDropdown = null;
+                }
+            });
+        }
+
+        // 单击事件：展开/收起或选中
         columnsContainer.addEventListener('click', (e) => {
             const a = (e.target as HTMLElement).closest('a[data-key]') as HTMLElement;
             if (!a) return;
@@ -285,7 +295,7 @@ export class CascadeSelector {
             }
         });
 
-        // 搜索输入处理（保持不变）
+        // 搜索输入处理
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => {
                 if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
@@ -298,15 +308,7 @@ export class CascadeSelector {
                     this.handleSearch(this.searchInput!.value.trim());
                 }
             });
-            document.addEventListener('click', (e) => {
-                if (this.searchDropdown && !this.searchInput?.contains(e.target as Node) && !this.searchDropdown.contains(e.target as Node)) {
-                    this.searchDropdown.remove();
-                    this.searchDropdown = null;
-                }
-            });
         }
-
-        // 注意：容器级右键监听已移除，改为在 renderStack 中为每个节点单独绑定
     }
 
     // ---------- 展开/收缩 ----------
@@ -440,7 +442,6 @@ export class CascadeSelector {
 
     // ---------- 选中逻辑 ----------
     private addSelected(node: FlattenedNode) {
-        // 只有叶子节点可以被选中
         if (node.nodes && node.nodes.length > 0) return;
         if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) {
             this.removeSelected(this.selectedNodes[0].key);
@@ -466,11 +467,9 @@ export class CascadeSelector {
     }
 
     private selectAllChildren(parentNode: FlattenedNode) {
-        // 自动展开当前层级
         this.expandedParents.length = parentNode.stack;
         this.expandedParents[parentNode.stack] = String(parentNode.key);
 
-        // 收集所有后代叶子节点
         const collectLeaves = (node: TreeNode): TreeNode[] => {
             if (node.nodes && node.nodes.length > 0) {
                 let leaves: TreeNode[] = [];
@@ -482,11 +481,8 @@ export class CascadeSelector {
             return [node];
         };
         const leafNodes = collectLeaves(parentNode.originalNode);
-
-        // 清空所有已选节点（全选替换）
         this.selectedNodes = [];
 
-        // 重新添加叶子节点，受 limit 约束
         for (const leaf of leafNodes) {
             if (this.options.limit > 0 && this.selectedNodes.length >= this.options.limit) break;
             this.selectedNodes.push(leaf);
@@ -518,7 +514,7 @@ export class CascadeSelector {
         return keys;
     }
 
-    // ---------- 搜索（下拉菜单）----------
+    // ---------- 搜索 ----------
     private handleSearch(keyword: string) {
         if (this.searchDropdown) {
             this.searchDropdown.remove();
@@ -615,6 +611,12 @@ export class CascadeSelector {
 
         this.refreshAllStacks();
         this.options.onChange(this.selectedNodes);
+    }
+
+    public destroy() {
+        this.globalEvents.removeAll();
+        if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+        this.container.innerHTML = '';
     }
 
     protected findNodeByKey(key: string | number, nodes: TreeNode[] = this.data): TreeNode | null {

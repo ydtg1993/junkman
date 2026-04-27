@@ -1,61 +1,50 @@
-import {contextmenu} from './aid/contextmenu';
-import {request} from './aid/request';
-import {createDOMFromTree} from './aid/dombuilder'
-import {imgDelay} from "./aid/imgdelay";
-import {Icon} from "./aid/icon";
-import {Menu} from './utils/selector/menu';
-import {SELECTOR_DIRECTION,SELECTOR_TOWARDS,SELECTOR_MODE} from './utils/selector/init'
-import {Switcher} from "./utils/selector/switcher";
-import {Modal} from "./utils/modal/index";
-import { CascadeSelector } from './utils/cascade';
-import { CascadeTree } from './utils/cascade/tree';
-import { EditableTable } from './utils/table';
-import { Sortable } from './utils/sortable';
-import { Paginator } from './utils/selector/paginator';
-import { dimensionalTree } from './aid/tree';
+// ──────────────────────── 基础工具 ────────────────────────
+export { contextmenu } from './aid/contextmenu';
+export { request } from './aid/request';
+export { createDOMFromTree } from './aid/dombuilder';
+export { imgDelay } from './aid/imgdelay';
+export { Icon } from './aid/icon';
+export { dimensionalTree } from './aid/tree';
+export { GlobalEventManager } from './aid/eventmanager';
 
-const selector = {
-    /**
-     * @class Menu
-     * @param dom   type:HTMLDocument   description: bind parent node
-     * @param select    type:{key:value,...}    description: select options data
-     *
-     * @function limit(num:int)     description: preset selected options limit number
-     * @function selected(params)   params:[value,...]
-     * @function settings(params)   description: preset menu select placeholder,options max height, options popup direction
-     *      params: {
-     *          placeholder:string,
-     *          height:string,
-     *          direction:junkman.SELECTOR_DIRECTION
-     *     }
-     * @function useHiddenInput(name:string)    description: use hidden input save data
-     * @function trigger    description: preset callback function in the event on click option
-     *      callback: (data)=>{
-     *          data.value      description: current selected value
-     *          data.operate    description: insert or delete
-     *          data.select     description: selected options
-     *          data.insert     description: selected options except beginning selected
-     *          data.delete     description: deleted from the beginning selected
-     *      }
-     * @function make   description: :build document
-     */
-    Menu: Menu,
+// ──────────────────────── 选择器组件 ────────────────────────
+import { Menu as MenuClass } from './utils/selector/menu';
+import { Switcher as SwitcherClass } from './utils/selector/switcher';
 
-    Switcher:Switcher,
+export { SELECTOR_DIRECTION, SELECTOR_TOWARDS, SELECTOR_MODE } from './utils/selector/init';
+
+// ──────────────────────── 模态框 ────────────────────────
+export { Modal } from './utils/modal/index';
+
+// ──────────────────────── 级联组件 ────────────────────────
+export { CascadeSelector } from './utils/cascade';
+export { CascadeTree } from './utils/cascade/tree';
+
+// ──────────────────────── 表格 ────────────────────────
+export { EditableTable } from './utils/table';
+
+// ──────────────────────── 表单构建器 ────────────────────────
+export { FormBuilder } from './utils/formbuilder/index';
+
+// ──────────────────────── 拖拽排序 ────────────────────────
+export { Sortable } from './utils/sortable';
+
+// ──────────────────────── 分页器 ────────────────────────
+export { Paginator } from './utils/selector/paginator';
+
+// ──────────────────────── 兼容性命名空间 ────────────────────────
+export const selector = {
+    Menu: MenuClass,
+    Switcher: SwitcherClass,
 };
 
-// 基础工具
-export { request, contextmenu, createDOMFromTree, imgDelay, Icon, dimensionalTree };
-// 模态框
-export { Modal };
-// 选择器组件
-export { selector, SELECTOR_DIRECTION, SELECTOR_TOWARDS, SELECTOR_MODE };
-export { Menu, Switcher };
-// 级联组件
-export { CascadeSelector, CascadeTree };
-// 表格组件
-export { EditableTable };
-// 拖拽排序
-export { Sortable };
-// 分页器
-export { Paginator };
+// ──────────────────────── 类型导出 ────────────────────────
+export type { TreeNode, FlattenedNode } from './aid/tree';
+export type { ContextMenuItem, ContextMenuOptions } from './aid/contextmenu';
+export type { RequestOptions, RequestError } from './aid/request';
+export type { FormFieldSchema } from './utils/formbuilder/types';
+export type { CascadeOptions, CascadeTreeOptions } from './utils/cascade/types';
+export type { Column, TableOptions } from './utils/table/index';
+export type { SortableOptions } from './utils/sortable/index';
+export type { PaginatorOptions } from './utils/selector/paginator';
+export type { ImgDelayOptions } from './aid/imgdelay';

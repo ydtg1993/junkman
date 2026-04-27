@@ -1,7 +1,5 @@
-import { createDOMFromTree } from "../../aid/dombuilder";
 import { generateUniqueString } from "../../aid/random";
 import { request } from "../../aid/request";
-import { Icon } from "../../aid/icon";
 
 export class Modal {
     protected xhr: { url: string; method?: string; data?: any } | undefined;
@@ -22,6 +20,11 @@ export class Modal {
     protected headerHidden: boolean = false;
     protected submitHandler?: (formData: FormData) => Promise<void>;
     protected delayedEvents: { selector: string; event: string; handler: Function }[] = [];
+
+    // 资源管理
+    private controller: AbortController = new AbortController();
+    private timeoutTimer: number | null = null;
+    private xhrAbortController: AbortController | null = null;
 
     constructor(options: {
         title?: string;
@@ -56,17 +59,40 @@ export class Modal {
     }
 
     public setLinkContent(response: string) {
-        const body = this.DOM.querySelector('.modal-body') as HTMLElement;
+        const body = this.DOM?.querySelector('.modal-body') as HTMLElement;
         if (body) {
             body.innerHTML = '';
             body.appendChild(document.createRange().createContextualFragment(response));
         }
     }
 
+    /**
+     * 关闭模态框，释放所有事件和定时器
+     */
     public close() {
-        if (this.DOM && this.DOM.parentNode) {
-            this.parentNode.removeChild(this.DOM);
+        // 取消所有通过 AbortController 绑定的事件
+        this.controller.abort();
+
+        // 清除超时定时器
+        if (this.timeoutTimer) {
+            clearTimeout(this.timeoutTimer);
+            this.timeoutTimer = null;
         }
+
+        // 取消正在进行的 XHR 请求
+        if (this.xhrAbortController) {
+            this.xhrAbortController.abort();
+            this.xhrAbortController = null;
+        }
+
+        // 移除 DOM（如果仍然挂载在父节点中）
+        if (this.DOM && this.DOM.parentNode) {
+            // 注意：parentNode 可能不是 this.parentNode（如果调用过 setLinkContent 等不会有影响）
+            this.DOM.parentNode.removeChild(this.DOM);
+        }
+
+        // 重置 AbortController 以便可能再次 make() 复用（需手动再次 make）
+        this.controller = new AbortController();
     }
 
     public bindEvent(selector: string, event: string, handler: Function) {
@@ -83,16 +109,24 @@ export class Modal {
         return this;
     }
 
-    public bindSubmit(selector: string, onSubmit: (formData: FormData) => Promise<void>) {
+    /**
+     * 绑定表单提交处理器（不再强制要求 xhr）
+     */
+    public bindSubmit(onSubmit: (formData: FormData) => Promise<void>) {
         this.submitHandler = onSubmit;
         return this;
     }
 
     make() {
+        // 确保之前的资源被清理
+        this.controller.abort();
+        this.controller = new AbortController();
+
         // ----- 遮罩层 -----
         const overlay = document.createElement('div');
         overlay.className = 'modal modal-open';
         overlay.setAttribute('unique', this.unique);
+        this.DOM = overlay;
 
         // ----- 内容盒子 -----
         const modalBox = document.createElement('div');
@@ -100,11 +134,11 @@ export class Modal {
         if (this.windowStyles.width) modalBox.style.width = this.windowStyles.width;
         if (this.windowStyles.height) modalBox.style.height = this.windowStyles.height;
 
-        // ----- 关闭按钮（角落）-----
+        // ----- 关闭按钮（使用 AbortController 绑定）-----
         const closeBtn = document.createElement('button');
         closeBtn.className = 'btn btn-sm btn-circle absolute right-2 top-2';
         closeBtn.innerHTML = '✕';
-        closeBtn.addEventListener('click', () => this.close());
+        closeBtn.addEventListener('click', () => this.close(), { signal: this.controller.signal });
         modalBox.appendChild(closeBtn);
 
         // ----- 标题（可选）-----
@@ -128,30 +162,38 @@ export class Modal {
         modalBox.appendChild(body);
 
         overlay.appendChild(modalBox);
-        this.DOM = overlay;
         this.parentNode.appendChild(overlay);
 
         // ----- 点击背景关闭 -----
         if (this.gauze) {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) this.close();
-            });
+            }, { signal: this.controller.signal });
         }
 
         // ----- 超时关闭 -----
         if (this.timeout > 0) {
-            setTimeout(() => this.close(), this.timeout * 1000);
+            this.timeoutTimer = window.setTimeout(() => this.close(), this.timeout * 1000);
         }
 
-        // ----- 远程内容加载 -----
+        // ----- 远程内容加载（支持取消）-----
         if (this.xhr) {
             body.innerHTML = '<div class="flex justify-center items-center h-24"><span class="loading loading-spinner loading-lg"></span></div>';
+
+            // 创建可取消的请求
+            const abortController = new AbortController();
+            this.xhrAbortController = abortController;
+
             request({
                 url: this.xhr.url,
                 method: this.xhr.method || 'GET',
                 data: this.xhr.data || {},
+                signal: abortController.signal,
             })
                 .then((resp: any) => {
+                    // 如果模态框已被关闭，则不再更新 DOM
+                    if (!this.DOM || !this.DOM.parentNode) return;
+
                     body.innerHTML = '';
                     if (typeof resp === 'string') {
                         body.innerHTML = resp;
@@ -160,33 +202,52 @@ export class Modal {
                     } else {
                         body.innerHTML = '<div class="text-error">内容格式错误</div>';
                     }
+
                     // 绑定延迟事件
                     for (const ev of this.delayedEvents) {
                         const el = this.DOM.querySelector(ev.selector);
-                        if (el) el.addEventListener(ev.event, (e) => ev.handler(e, el));
+                        if (el) {
+                            el.addEventListener(ev.event, (e) => ev.handler(e, el), { signal: this.controller.signal });
+                        }
                     }
                 })
-                .catch(() => {
-                    body.innerHTML = '<div class="flex justify-center items-center h-24 text-error">加载失败</div>';
+                .catch((err) => {
+                    // 如果是主动取消，不显示错误
+                    if (err?.name === 'AbortError' || err?.message === 'Request cancelled') return;
+                    if (this.DOM && this.DOM.parentNode) {
+                        body.innerHTML = '<div class="flex justify-center items-center h-24 text-error">加载失败</div>';
+                    }
+                })
+                .finally(() => {
+                    this.xhrAbortController = null;
                 });
         }
 
-        // 绑定延迟事件（初次）
+        // 绑定延迟事件（初次，静态内容）
         for (const ev of this.delayedEvents) {
             const el = this.DOM.querySelector(ev.selector);
-            if (el) el.addEventListener(ev.event, (e) => ev.handler(e, el));
+            if (el) {
+                el.addEventListener(ev.event, (e) => ev.handler(e, el), { signal: this.controller.signal });
+            }
         }
 
-        // 绑定表单提交
-        if (this.submitHandler && this.xhr) {
-            const form = this.DOM.querySelector('form');
+        // ----- 表单提交处理（不再依赖 xhr）-----
+        if (this.submitHandler) {
+            const form = this.DOM.querySelector('form') as HTMLFormElement;
             if (form) {
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const formData = new FormData(form);
                     await this.submitHandler!(formData);
-                });
+                }, { signal: this.controller.signal });
             }
         }
+    }
+
+    /**
+     * 销毁模态框（等同于 close，但强调彻底清理）
+     */
+    public destroy() {
+        this.close();
     }
 }

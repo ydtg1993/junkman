@@ -1,3 +1,13 @@
+export interface DOMNode {
+    tag?: string;
+    className?: string;
+    attributes?: Record<string, string>;
+    textContent?: string;
+    styles?: Partial<CSSStyleDeclaration>;
+    events?: Record<string, (event: Event, dom: HTMLElement) => void>;
+    nodes?: string | HTMLElement | DOMNode[] | Array<string | HTMLElement | DOMNode>;
+}
+
 export function createDOMFromTree(node: any, parent: HTMLElement|undefined = undefined): HTMLElement {
     let tag = 'div';
     if (node.hasOwnProperty('tag')) tag = node.tag;
