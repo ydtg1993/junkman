@@ -1001,35 +1001,48 @@ var junkman = (function (exports) {
             this.globalEvents = new GlobalEventManager();
             this.dropdownWrapper = null;
             this.searchTimer = null;
+            this.selectedArea = null;
         }
-        _selectedInputShow(selectedDom) {
+        /** 更新触发器内显示已选标签 */
+        _selectedInputShow() {
+            var _a;
+            if (!this.selectedArea)
+                return;
             const names = [];
             this.selectData.forEach((d) => {
                 const name = Object.keys(this.select).find(key => this.select[key] === d);
                 if (name)
                     names.push(name);
             });
-            selectedDom.innerHTML = '';
+            this.selectedArea.innerHTML = '';
             if (this.limitNumber === 1) {
                 const span = document.createElement('span');
                 span.className = 'truncate';
-                span.textContent = names[0] || '';
-                selectedDom.appendChild(span);
+                span.textContent = names[0] || this.placeholder;
+                this.selectedArea.appendChild(span);
+                return;
+            }
+            if (names.length === 0) {
+                this.selectedArea.textContent = this.placeholder;
                 return;
             }
             for (const name of names) {
-                const span = document.createElement('span');
-                span.className = 'badge badge-sm bg-base-300 text-base-content mx-0.5 truncate';
-                span.textContent = name;
-                span.title = name;
-                selectedDom.appendChild(span);
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-sm badge-ghost gap-1';
+                badge.innerHTML = `${name} <button class="btn btn-ghost btn-xs p-0 hover:bg-transparent" data-value="${this.select[name]}">✕</button>`;
+                // 移除单个标签
+                (_a = badge.querySelector('button')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this._onOptionToggle(this.select[name], true);
+                });
+                this.selectedArea.appendChild(badge);
             }
         }
+        /** 构建选项列表（同原逻辑） */
         _buildOptions() {
             const tree = [];
-            const select = this.select;
             let line = 0;
-            for (const [name, value] of Object.entries(select)) {
+            for (const [name, value] of Object.entries(this.select)) {
                 this.value_line_hash[value] = line;
                 line++;
                 tree.push({
@@ -1043,6 +1056,7 @@ var junkman = (function (exports) {
             }
             return tree;
         }
+        /** 搜索输入框 */
         _buildSearchInput() {
             return {
                 tag: 'input',
@@ -1070,6 +1084,45 @@ var junkman = (function (exports) {
                 },
             };
         }
+        /** 切换选项状态 */
+        _onOptionToggle(value, forceDelete = false) {
+            var _a, _b, _c, _d;
+            const isSelected = this.selectData.includes(value);
+            if (forceDelete || isSelected) {
+                this._tagCal(value, exports.SELECTOR_MODE.Delete);
+                // 更新菜单项样式
+                const a = (_a = this.dropdownWrapper) === null || _a === void 0 ? void 0 : _a.querySelector(`a[data-value="${value}"]`);
+                if (a) {
+                    a.removeAttribute('active');
+                    const check = a.querySelector('.check-icon');
+                    if (check)
+                        check.remove();
+                }
+                this._selectedInputShow();
+                if (this.selectData.length === 0 && this.selectedArea) {
+                    this.selectedArea.textContent = this.placeholder;
+                }
+            }
+            else {
+                this._tagCal(value, exports.SELECTOR_MODE.Insert);
+                if (this.limitNumber > 0 && this.selectData.length > this.limitNumber) {
+                    // 超出限制，移除最早的选中项
+                    const removedValue = this.selectData[0];
+                    this._tagCal(removedValue, exports.SELECTOR_MODE.Delete);
+                    const removedA = (_b = this.dropdownWrapper) === null || _b === void 0 ? void 0 : _b.querySelector(`a[data-value="${removedValue}"]`);
+                    if (removedA) {
+                        removedA.removeAttribute('active');
+                        (_c = removedA.querySelector('.check-icon')) === null || _c === void 0 ? void 0 : _c.remove();
+                    }
+                }
+                const a = (_d = this.dropdownWrapper) === null || _d === void 0 ? void 0 : _d.querySelector(`a[data-value="${value}"]`);
+                if (a) {
+                    a.setAttribute('active', '1');
+                    a.insertAdjacentHTML('beforeend', `<span class="check-icon">${Icon.check}</span>`);
+                }
+                this._selectedInputShow();
+            }
+        }
         make() {
             const directionClassMap = {
                 [exports.SELECTOR_DIRECTION.Down]: 'dropdown-bottom',
@@ -1085,15 +1138,16 @@ var junkman = (function (exports) {
             const dirClass = directionClassMap[this.direction] || 'dropdown-bottom';
             const dropdownWrapper = document.createElement('div');
             dropdownWrapper.className = `dropdown ${dirClass} w-full`;
-            this.dropdownWrapper = dropdownWrapper; // 保存引用，便于销毁
-            const trigger = document.createElement('label');
+            this.dropdownWrapper = dropdownWrapper;
+            // ───────── 触发器（仿原生 select 样式） ─────────
+            const trigger = document.createElement('div');
             trigger.tabIndex = 0;
-            trigger.className = 'btn btn-sm flex items-center gap-1 justify-between leading-none';
-            const selectedArea = document.createElement('span');
-            selectedArea.className = 'selected-area flex items-center gap-1 truncate';
-            selectedArea.textContent = this.placeholder;
-            trigger.appendChild(selectedArea);
-            trigger.appendChild(createDOMFromTree({ tag: 'span', textContent: '▼', className: 'text-xs' }));
+            trigger.className = 'select select-bordered flex items-center gap-2 min-h-[2.5rem] h-auto cursor-pointer py-1 px-3';
+            this.selectedArea = document.createElement('div');
+            this.selectedArea.className = 'flex flex-wrap items-center gap-1 flex-1';
+            this.selectedArea.textContent = this.placeholder;
+            trigger.appendChild(this.selectedArea);
+            // ───────── 下拉内容 ─────────
             const dropdownContent = document.createElement('div');
             dropdownContent.className = 'dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 mt-1 hidden z-50';
             if (!this.searchOff) {
@@ -1116,33 +1170,8 @@ var junkman = (function (exports) {
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    a.getAttribute('data-name');
                     const value = a.getAttribute('data-value');
-                    if (this.selectData.indexOf(value) !== -1) {
-                        this._tagCal(value, exports.SELECTOR_MODE.Delete);
-                        a.removeAttribute('active');
-                        const checkIcon = a.querySelector('.check-icon');
-                        if (checkIcon)
-                            checkIcon.remove();
-                        this._selectedInputShow(selectedArea);
-                        if (this.selectData.length === 0)
-                            selectedArea.textContent = this.placeholder;
-                    }
-                    else {
-                        this._tagCal(value, exports.SELECTOR_MODE.Insert);
-                        if (this.limitNumber > 0 && this.selectData.length > this.limitNumber) {
-                            this.triggerEvent.enable = false;
-                            const firstVal = this.selectData[0];
-                            const firstIdx = this.value_line_hash[firstVal] + 1;
-                            const popOpt = dropdownContent.querySelector(`li:nth-child(${firstIdx}) a`);
-                            if (popOpt)
-                                popOpt.click();
-                            this.triggerEvent.enable = true;
-                        }
-                        a.setAttribute('active', '1');
-                        a.insertAdjacentHTML('beforeend', `<span class="check-icon">${Icon.check}</span>`);
-                        this._selectedInputShow(selectedArea);
-                    }
+                    this._onOptionToggle(value);
                 });
                 li.appendChild(a);
                 ul.appendChild(li);
@@ -1151,6 +1180,7 @@ var junkman = (function (exports) {
             dropdownWrapper.appendChild(trigger);
             dropdownWrapper.appendChild(dropdownContent);
             this.parentNode.appendChild(dropdownWrapper);
+            // 开关下拉
             trigger.addEventListener('click', (e) => {
                 e.stopPropagation();
                 dropdownContent.classList.toggle('hidden');
@@ -1161,8 +1191,13 @@ var junkman = (function (exports) {
                 }
             };
             this.globalEvents.add(document, 'click', closeDropdown);
+            // 初始化
             (async () => {
                 this.delayExec();
+                if (this.selectedData.length > 0) {
+                    this.selectedData.forEach(v => this._onOptionToggle(v, true)); // 先同步状态
+                    this._selectedInputShow();
+                }
                 if (this.show) {
                     dropdownContent.classList.remove('hidden');
                 }
@@ -1170,14 +1205,11 @@ var junkman = (function (exports) {
             return this;
         }
         destroy() {
-            // 清除搜索定时器
             if (this.searchTimer) {
                 clearTimeout(this.searchTimer);
                 this.searchTimer = null;
             }
-            // 移除全局事件
             this.globalEvents.removeAll();
-            // 移除 DOM（精确移除自身创建的 dropdown 容器）
             if (this.dropdownWrapper && this.dropdownWrapper.parentNode) {
                 this.dropdownWrapper.parentNode.removeChild(this.dropdownWrapper);
                 this.dropdownWrapper = null;
@@ -4406,6 +4438,61 @@ var junkman = (function (exports) {
         }
     }
 
+    class Toggle {
+        constructor(options) {
+            this.container = typeof options.container === 'string'
+                ? document.querySelector(options.container)
+                : options.container;
+            if (!this.container)
+                throw new Error('Toggle container not found');
+            this.options = {
+                checked: false,
+                disabled: false,
+                size: 'md',
+                ...options,
+            };
+            this.input = document.createElement('input');
+            this.input.type = 'checkbox';
+            this.input.className = `toggle toggle-${this.options.size}`;
+            if (this.options.checked)
+                this.input.checked = true;
+            if (this.options.disabled)
+                this.input.disabled = true;
+            this.input.addEventListener('change', () => {
+                var _a, _b;
+                (_b = (_a = this.options).onChange) === null || _b === void 0 ? void 0 : _b.call(_a, this.input.checked);
+            });
+            this.container.innerHTML = '';
+            this.container.appendChild(this.input);
+        }
+        /**
+         * 获取当前开关状态
+         */
+        getValue() {
+            return this.input.checked;
+        }
+        /**
+         * 设置开关状态
+         */
+        setValue(value) {
+            this.input.checked = value;
+            // 手动触发 change 事件（可选）
+            this.input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        /**
+         * 设置禁用状态
+         */
+        setDisabled(disabled) {
+            this.input.disabled = disabled;
+        }
+        /**
+         * 销毁组件，移除 DOM
+         */
+        destroy() {
+            this.input.remove();
+        }
+    }
+
     exports.CascadeSelector = CascadeSelector;
     exports.CascadeTree = CascadeTree;
     exports.EditableTable = EditableTable;
@@ -4421,6 +4508,7 @@ var junkman = (function (exports) {
     exports.Switcher = Switcher;
     exports.Tabs = Tabs;
     exports.Toast = Toast;
+    exports.Toggle = Toggle;
     exports.contextmenu = contextmenu;
     exports.createDOMFromTree = createDOMFromTree;
     exports.dimensionalTree = dimensionalTree;

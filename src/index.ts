@@ -149,3 +149,6 @@ export type { PaginatorOptions } from './utils/pagination/paginator';
 
 /** 图片延迟加载选项类型 */
 export type { ImgDelayOptions } from './aid/imgdelay';
+
+export { Toggle } from './utils/toggle/index';
+export type { ToggleOptions } from './utils/toggle/index';
