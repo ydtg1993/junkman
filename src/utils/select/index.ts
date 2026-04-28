@@ -1,6 +1,6 @@
-import { SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS, SelectorInterface } from "./init";
+import { SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS } from "./types";
 
-export class Selector implements SelectorInterface {
+export abstract class Select {
     protected parentNode: HTMLElement = document.body;
     protected select: { [key: string]: string } = {};
     protected limitNumber!: number;

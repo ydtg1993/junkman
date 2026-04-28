@@ -19,8 +19,3 @@ export enum SELECTOR_DIRECTION {
     LeftUp,
     LeftMid,
 }
-
-export interface SelectorInterface {
-    selected: (selected: string[]) => this;
-    make: () => void;
-}

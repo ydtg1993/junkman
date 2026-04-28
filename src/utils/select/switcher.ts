@@ -1,8 +1,8 @@
-import { Selector } from "./index";
-import { SELECTOR_MODE, SELECTOR_TOWARDS, SelectorInterface } from "./init";
+import { Select } from "./index";
+import { SELECTOR_MODE, SELECTOR_TOWARDS } from "./types";
 import { createDOMFromTree } from "../../aid/dombuilder";
 
-export class Switcher extends Selector implements SelectorInterface {
+export class Switcher extends Select {
     private buttonContainer: HTMLElement | null = null;
 
     /** 构建选项按钮树 */

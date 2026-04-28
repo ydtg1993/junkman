@@ -1,10 +1,10 @@
-import { Selector } from "./index";
-import { SELECTOR_DIRECTION, SELECTOR_MODE, SelectorInterface } from "./init";
+import { Select } from "./index";
+import { SELECTOR_DIRECTION, SELECTOR_MODE } from "./types";
 import { Icon } from "../../aid/icon";
 import { createDOMFromTree } from "../../aid/dombuilder";
 import { GlobalEventManager } from "../../aid/eventmanager";
 
-export class Dropdown extends Selector implements SelectorInterface {
+export class Selector extends Select {
     private globalEvents = new GlobalEventManager();
     private dropdownWrapper: HTMLElement | null = null;
     private searchTimer: number | null = null;

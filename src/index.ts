@@ -52,11 +52,11 @@ export { Tabs } from './utils/tabs/index';
 // ============================================================
 // 📋 选择类组件
 // ============================================================
-export { Dropdown } from './utils/selector/dropdown';
-export { Switcher } from './utils/selector/switcher';
+export { Selector } from './utils/select/selector';
+export { Switcher } from './utils/select/switcher';
 
 /** 选择器相关枚举（方向、朝向、模式） */
-export { SELECTOR_DIRECTION, SELECTOR_TOWARDS, SELECTOR_MODE } from './utils/selector/init';
+export { SELECTOR_DIRECTION, SELECTOR_TOWARDS, SELECTOR_MODE } from './utils/select/types';
 
 // ============================================================
 // 🪟 模态框
@@ -101,7 +101,7 @@ export { Sortable } from './utils/sortable';
 // ============================================================
 
 /** 分页器（Paginator），支持跳转、每页条数切换 */
-export { Paginator } from './utils/selector/paginator';
+export { Paginator } from './utils/pagination/paginator';
 
 // ============================================================
 // 🗂️ 侧边栏文档布局（SidebarTabs）
@@ -145,7 +145,7 @@ export type { Column, TableOptions } from './utils/table/index';
 export type { SortableOptions } from './utils/sortable/index';
 
 /** 分页器配置类型 */
-export type { PaginatorOptions } from './utils/selector/paginator';
+export type { PaginatorOptions } from './utils/pagination/paginator';
 
 /** 图片延迟加载选项类型 */
 export type { ImgDelayOptions } from './aid/imgdelay';

@@ -827,7 +827,7 @@ var junkman = (function (exports) {
         SELECTOR_DIRECTION[SELECTOR_DIRECTION["LeftMid"] = 8] = "LeftMid";
     })(exports.SELECTOR_DIRECTION || (exports.SELECTOR_DIRECTION = {}));
 
-    class Selector {
+    class Select {
         constructor(select, options) {
             this.parentNode = document.body;
             this.select = {};
@@ -995,7 +995,7 @@ var junkman = (function (exports) {
         }
     }
 
-    class Dropdown extends Selector {
+    class Selector extends Select {
         constructor() {
             super(...arguments);
             this.globalEvents = new GlobalEventManager();
@@ -1185,7 +1185,7 @@ var junkman = (function (exports) {
         }
     }
 
-    class Switcher extends Selector {
+    class Switcher extends Select {
         constructor() {
             super(...arguments);
             this.buttonContainer = null;
@@ -3637,7 +3637,7 @@ var junkman = (function (exports) {
                     td.appendChild(textarea);
                     break;
                 }
-                case 'select': {
+                case 'selector': {
                     if (isEditable) {
                         const selectData = {};
                         if ((_f = col.options) === null || _f === void 0 ? void 0 : _f.list) {
@@ -3648,7 +3648,7 @@ var junkman = (function (exports) {
                         const menuContainer = document.createElement('div');
                         menuContainer.style.width = '100%';
                         const currentOption = (_h = (_g = col.options) === null || _g === void 0 ? void 0 : _g.list) === null || _h === void 0 ? void 0 : _h.find(opt => String(opt.key) === String(value));
-                        const menu = new Dropdown(selectData, {
+                        const menu = new Selector(selectData, {
                             limit: ((_j = col.options) === null || _j === void 0 ? void 0 : _j.multiple) ? 0 : 1,
                             searchOff: true,
                             placeholder: (currentOption === null || currentOption === void 0 ? void 0 : currentOption.value) || '请选择',
@@ -4408,7 +4408,6 @@ var junkman = (function (exports) {
 
     exports.CascadeSelector = CascadeSelector;
     exports.CascadeTree = CascadeTree;
-    exports.Dropdown = Dropdown;
     exports.EditableTable = EditableTable;
     exports.FormBuilder = FormBuilder;
     exports.GlobalEventManager = GlobalEventManager;
@@ -4416,6 +4415,7 @@ var junkman = (function (exports) {
     exports.ImgDelay = ImgDelay;
     exports.Modal = Modal;
     exports.Paginator = Paginator;
+    exports.Selector = Selector;
     exports.SidebarTabs = SidebarTabs;
     exports.Sortable = Sortable;
     exports.Switcher = Switcher;

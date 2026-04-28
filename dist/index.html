@@ -219,8 +219,8 @@
         return renderSection('🌲 dimensionalTree 树展平', '用于级联组件的核心工具。', api, demo);
     }
 
-    function renderDropdown() {
-        const api = `<pre><code>new junkman.Dropdown(data, options)</code></pre>
+    function renderSelector() {
+        const api = `<pre><code>new junkman.Selector(data, options)</code></pre>
       <h3>参数</h3>
       <table class="api-table">
         <tr><th>参数</th><th>类型</th><th>说明</th></tr>
@@ -232,13 +232,13 @@
         <tr><td>options.menuMaxHeight</td><td>string</td><td>最大高度</td></tr>
       </table>
       <p><b>方法：</b> <code>selected([values])</code>, <code>make()</code>, <code>destroy()</code></p>`;
-        const demo = `<div id="menuDemo"></div>`;
-        return renderSection('📋 Dropdown 下拉菜单', '多选下拉，支持搜索。', api, demo);
+        const demo = `<div id="selectorDemo"></div>`;
+        return renderSection('📋 Selector 下拉选择器', '多选下拉，支持搜索。', api, demo);
     }
 
     function renderSwitcher() {
         const api = `<pre><code>new junkman.Switcher(data, options)</code></pre>
-      <h3>参数同 Dropdown</h3>
+      <h3>参数同 Selector</h3>
       <p><b>特有：</b> <code>options.towards</code> 控制排列方向（Horizontal/Vertical）</p>
       <p><b>方法：</b> <code>selected(values)</code>, <code>make()</code>, <code>destroy()</code></p>`;
         const demo = `<div id="switcherDemo"></div>`;
@@ -467,9 +467,9 @@
             result.textContent = JSON.stringify(flat, (key, val) => key === 'originalNode' ? undefined : val, 2);
         }
     }
-    function initDropdown() {
-        const container = document.getElementById('menuDemo');
-        new junkman.Dropdown({ "苹果": "1", "香蕉": "2", "橙子": "3" }, {
+    function initSelector() {
+        const container = document.getElementById('selectorDemo');
+        new junkman.Selector({ "苹果": "1", "香蕉": "2", "橙子": "3" }, {
             limit: 2, placeholder: "请选择水果", menuMaxHeight: "200px",
             trigger: (d) => toast.show({ message: `选中: ${d.value}`, type: 'success' }), parentNode: container
         }).selected(['2']).make();
@@ -611,9 +611,9 @@
             { target: 'dombuilder', label: 'createDOMFromTree', group: '基础工具', render: renderDOMBuilder, afterRender: initDOMBuilder },
             { target: 'icons', label: 'Icon 图标', group: '基础工具', render: renderIcons },
             { target: 'dimensionalTree', label: 'dimensionalTree', group: '基础工具', render: renderDimensionalTree, afterRender: initDimensionalTree },
-            { target: 'dropdown', label: 'Dropdown 下拉菜单', group: '选择器', render: renderDropdown, afterRender: initDropdown },
+            { target: 'selector', label: 'Selector 下拉菜单', group: '选择器', render: renderSelector, afterRender: initSelector },
             { target: 'switcher', label: 'Switcher 开关', group: '选择器', render: renderSwitcher, afterRender: initSwitcher },
-            { target: 'paginator', label: 'Paginator 分页器', group: '选择器', render: renderPaginator, afterRender: initPaginator },
+            { target: 'paginator', label: 'Paginator 分页器', group: '分页器', render: renderPaginator, afterRender: initPaginator },
             { target: 'cascadeselector', label: 'CascadeSelector', group: '级联', render: renderCascadeSelector, afterRender: initCascadeSelector },
             { target: 'cascadetree', label: 'CascadeTree', group: '级联', render: renderCascadeTree, afterRender: initCascadeTree },
             { target: 'editabletable', label: 'EditableTable', group: '表格', render: renderEditableTable, afterRender: initEditableTable },

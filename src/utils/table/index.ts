@@ -2,9 +2,9 @@ import { Sortable } from '../sortable';
 import { Icon } from '../../aid/icon';
 import { request } from '../../aid/request';
 import { ImgDelay } from '../../aid/imgdelay';
-import { Dropdown } from '../selector/dropdown';
-import { Switcher } from '../selector/switcher';
-import { SELECTOR_DIRECTION } from '../selector/init';
+import { Selector } from '../select/selector';
+import { Switcher } from '../select/switcher';
+import { SELECTOR_DIRECTION } from '../select/types';
 
 export interface Column {
     name: string;
@@ -12,7 +12,7 @@ export interface Column {
     type:
         | 'text'
         | 'input'
-        | 'select'
+        | 'selector'
         | 'date'
         | 'image'
         | 'hidden'
@@ -79,7 +79,7 @@ export class EditableTable {
 
     // 用于清理的资源
     private imgDelayCleanup: (() => void) | null = null;
-    private menuInstances: Dropdown[] = [];
+    private menuInstances: Selector[] = [];
     private switcherInstances: Switcher[] = [];
     private eventCleanups: (() => void)[] = [];
 
@@ -393,7 +393,7 @@ export class EditableTable {
                 td.appendChild(textarea);
                 break;
             }
-            case 'select': {
+            case 'selector': {
                 if (isEditable) {
                     const selectData: { [k: string]: string } = {};
                     if (col.options?.list) {
@@ -404,7 +404,7 @@ export class EditableTable {
                     const menuContainer = document.createElement('div');
                     menuContainer.style.width = '100%';
                     const currentOption = col.options?.list?.find(opt => String(opt.key) === String(value));
-                    const menu = new Dropdown(selectData, {
+                    const menu = new Selector(selectData, {
                         limit: col.options?.multiple ? 0 : 1,
                         searchOff: true,
                         placeholder: currentOption?.value || '请选择',
