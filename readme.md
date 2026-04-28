@@ -59,6 +59,6 @@ npm run dev
 
 ### 📖 交互式文档
 
-#### [在线演示文档](https://codepen.io/ydtg1993-the-bashful/pen/bNBbqQW)
+#### [在线演示文档](https://es-d-3504472620260430-019dd58f-dd5c-7794-a6b3-f68861625efe.codepen.dev/)
 
 > 项目包含一个完整的 dist/index.html（基于 DaisyUI 样式），左侧导航选择组件，右侧展示说明、参数表格和可交互的演示。
