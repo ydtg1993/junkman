@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Junkman 组件库 - 完整文档</title>
-    <script src="./junkman.js?v5"></script>
-    <link href="./junkman.css?v5" rel="stylesheet" />
+    <script src="./junkman.js?v6"></script>
+    <link href="./junkman.css?v6" rel="stylesheet" />
     <style>
         :root { --sidebar-width: 240px; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -169,7 +169,7 @@
     }
 
     function renderImgDelay() {
-        const api = `<pre><code>junkman.imgDelay(elements, time?, options?)</code></pre>
+        const api = `<pre><code>junkman.Imgdelay(elements, time?, options?)</code></pre>
       <h3>参数</h3>
       <table class="api-table">
         <tr><th>参数</th><th>类型</th><th>默认</th><th>说明</th></tr>
@@ -448,7 +448,7 @@
     }
     function initImgDelay() {
         const imgs = document.querySelectorAll('#imgDelayDemo img');
-        junkman.imgDelay(Array.from(imgs), 100, { zoom: true, width: 250, height: -1 });
+        junkman.ImgDelay(Array.from(imgs), 100, { zoom: true, width: 250, height: -1 });
     }
     function initDOMBuilder() {
         const container = document.getElementById('domBuilderDemo');

@@ -352,39 +352,55 @@ var junkman = (function (exports) {
         }
     }
 
-    function imgDelay(doms, time = 200, options = {}) {
-        const { zoom = false, width = 300, height = 0, previewClass = '' } = options;
-        // 收集需要清理的资源
+    /**
+     * 图片延迟加载工具（含骨架屏）
+     * @param doms 需要处理的图片元素数组
+     * @param time 延迟加载的间隔时间 (ms)
+     * @param options 配置项
+     * @returns 销毁函数，用于清理所有事件和预览图
+     */
+    function ImgDelay(doms, time = 200, options = {}) {
+        const { zoom = false, width = 300, height = 0, previewClass = '', skeleton = true } = options;
         const cleanupFns = [];
-        // 收集所有动态创建的预览图，确保在清里时移除
         const previewImgs = new Set();
         doms.forEach((dom, idx) => {
             const src = dom.getAttribute('data-src');
             if (!src)
                 return;
-            // 如果图片已经通过其他方式加载完成（例如重复调用），跳过
-            if (dom.getAttribute('src') === src)
+            // 避免重复处理
+            if (dom.getAttribute('data-loaded') === 'true')
                 return;
+            dom.setAttribute('data-loaded', 'true');
+            // 骨架屏：给图片添加占位样式，并保存原始背景用于清除
+            let originalBg = '';
+            if (skeleton && dom instanceof HTMLImageElement) {
+                originalBg = dom.style.background;
+                dom.style.background = 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)';
+                dom.style.backgroundSize = '200% 100%';
+                dom.style.animation = 'imgloader-skeleton 1.5s ease-in-out infinite';
+                // 确保动画定义存在（只注入一次）
+                if (!document.getElementById('imgloader-skeleton-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'imgloader-skeleton-style';
+                    style.textContent = `
+          @keyframes imgloader-skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `;
+                    document.head.appendChild(style);
+                }
+            }
             let loadHandler = null;
             let mouseoverHandler = null;
             let mouseoutHandler = null;
             let previewImg = null;
             let timeoutId;
-            const cleanupDom = () => {
-                if (timeoutId)
-                    clearTimeout(timeoutId);
-                if (loadHandler && dom) {
-                    dom.removeEventListener('load', loadHandler);
-                }
-                if (mouseoverHandler && dom) {
-                    dom.removeEventListener('mouseover', mouseoverHandler);
-                }
-                if (mouseoutHandler && dom) {
-                    dom.removeEventListener('mouseout', mouseoutHandler);
-                }
-                if (previewImg && previewImg.parentNode) {
-                    previewImg.remove();
-                    previewImg = null;
+            const clearSkeleton = () => {
+                if (skeleton && dom instanceof HTMLImageElement) {
+                    dom.style.background = originalBg;
+                    dom.style.backgroundSize = '';
+                    dom.style.animation = '';
                 }
             };
             const setupZoom = () => {
@@ -392,18 +408,15 @@ var junkman = (function (exports) {
                     return;
                 mouseoverHandler = (e) => {
                     if (previewImg)
-                        return; // 已存在预览
+                        return;
                     previewImg = document.createElement('img');
                     previewImgs.add(previewImg);
-                    // 基础样式
                     previewImg.style.position = 'fixed';
                     previewImg.style.zIndex = '1000000';
                     previewImg.style.borderRadius = '3px';
                     previewImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-                    if (previewClass) {
+                    if (previewClass)
                         previewImg.className = previewClass;
-                    }
-                    // 图片加载完成后计算尺寸和位置
                     const applyPreview = () => {
                         if (!previewImg || !previewImg.parentNode)
                             return;
@@ -427,21 +440,17 @@ var junkman = (function (exports) {
                         }
                         previewImg.style.width = `${displayWidth}px`;
                         previewImg.style.height = `${displayHeight}px`;
-                        // 位置：鼠标右下方偏移15px，并保持在视口内
                         let left = e.clientX + 15;
                         let top = e.clientY + 15;
-                        if (left + displayWidth > window.innerWidth) {
+                        if (left + displayWidth > window.innerWidth)
                             left = e.clientX - displayWidth - 15;
-                        }
-                        if (top + displayHeight > window.innerHeight) {
+                        if (top + displayHeight > window.innerHeight)
                             top = e.clientY - displayHeight - 15;
-                        }
                         left = Math.max(0, left);
                         top = Math.max(0, top);
                         previewImg.style.left = `${left}px`;
                         previewImg.style.top = `${top}px`;
                     };
-                    // 如果图片已经加载完成，立即应用；否则等待加载事件
                     if (previewImg.complete && previewImg.naturalWidth > 0) {
                         document.body.appendChild(previewImg);
                         applyPreview();
@@ -478,14 +487,14 @@ var junkman = (function (exports) {
                 });
             };
             timeoutId = window.setTimeout(() => {
-                // 如果图片尚未加载，绑定 load 事件
                 const imgDom = dom;
                 const onLoad = () => {
                     imgDom.removeEventListener('load', onLoad);
+                    clearSkeleton();
                     setupZoom();
                 };
-                // 检查图片是否已经完成加载（缓存）
                 if (imgDom.complete && imgDom.naturalWidth > 0) {
+                    clearSkeleton();
                     setupZoom();
                 }
                 else {
@@ -496,23 +505,27 @@ var junkman = (function (exports) {
             }, idx * time);
             cleanupFns.push(() => {
                 clearTimeout(timeoutId);
-                cleanupDom();
+                if (loadHandler && dom)
+                    dom.removeEventListener('load', loadHandler);
+                if (mouseoverHandler && dom)
+                    dom.removeEventListener('mouseover', mouseoverHandler);
+                if (mouseoutHandler && dom)
+                    dom.removeEventListener('mouseout', mouseoutHandler);
+                if (previewImg) {
+                    previewImgs.delete(previewImg);
+                    previewImg.remove();
+                    previewImg = null;
+                }
             });
         });
         return () => {
-            // 执行所有清理回调
-            cleanupFns.forEach(fn => {
-                try {
-                    fn();
-                }
-                catch { /* 忽略可能的错误 */ }
-            });
+            cleanupFns.forEach(fn => { try {
+                fn();
+            }
+            catch { /* ignore */ } });
             cleanupFns.length = 0;
-            // 确保所有预览图都被移除
-            previewImgs.forEach(img => {
-                if (img.parentNode)
-                    img.remove();
-            });
+            previewImgs.forEach(img => { if (img.parentNode)
+                img.remove(); });
             previewImgs.clear();
         };
     }
@@ -3802,7 +3815,7 @@ var junkman = (function (exports) {
             this.data.forEach((row, idx) => this.renderRow(row, idx));
             // 重新应用图片延迟加载
             if (this.imgDelayQueue.length) {
-                this.imgDelayCleanup = imgDelay(this.imgDelayQueue, 200, this.imgDelaySettings);
+                this.imgDelayCleanup = ImgDelay(this.imgDelayQueue, 200, this.imgDelaySettings);
                 this.imgDelayQueue = [];
             }
             // 更新批量栏状态
@@ -4408,6 +4421,7 @@ var junkman = (function (exports) {
     exports.FormBuilder = FormBuilder;
     exports.GlobalEventManager = GlobalEventManager;
     exports.Icon = Icon;
+    exports.ImgDelay = ImgDelay;
     exports.Modal = Modal;
     exports.Paginator = Paginator;
     exports.SidebarTabs = SidebarTabs;
@@ -4417,7 +4431,6 @@ var junkman = (function (exports) {
     exports.contextmenu = contextmenu;
     exports.createDOMFromTree = createDOMFromTree;
     exports.dimensionalTree = dimensionalTree;
-    exports.imgDelay = imgDelay;
     exports.request = request;
     exports.selector = selector;
 

@@ -1,7 +1,7 @@
 import { Sortable } from '../sortable';
 import { Icon } from '../../aid/icon';
 import { request } from '../../aid/request';
-import { imgDelay } from '../../aid/imgdelay';
+import { ImgDelay } from '../../aid/imgdelay';
 import { Menu } from '../selector/menu';
 import { Switcher } from '../selector/switcher';
 import { SELECTOR_DIRECTION } from '../selector/init';
@@ -575,7 +575,7 @@ export class EditableTable {
 
         // 重新应用图片延迟加载
         if (this.imgDelayQueue.length) {
-            this.imgDelayCleanup = imgDelay(this.imgDelayQueue, 200, this.imgDelaySettings);
+            this.imgDelayCleanup = ImgDelay(this.imgDelayQueue, 200, this.imgDelaySettings);
             this.imgDelayQueue = [];
         }
 

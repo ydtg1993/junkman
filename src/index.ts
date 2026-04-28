@@ -30,7 +30,7 @@ export { GlobalEventManager } from './aid/eventmanager';
 // ============================================================
 
 /** 图片延迟加载与悬停预览（imgDelay） */
-export { imgDelay } from './aid/imgdelay';
+export { ImgDelay } from './aid/imgdelay';
 
 // ============================================================
 // 🔔 Toast 消息通知
