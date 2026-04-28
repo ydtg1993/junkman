@@ -8,35 +8,46 @@ export class Selector extends Select {
     private globalEvents = new GlobalEventManager();
     private dropdownWrapper: HTMLElement | null = null;
     private searchTimer: number | null = null;
+    private selectedArea: HTMLElement | null = null;
 
-    private _selectedInputShow(selectedDom: HTMLElement) {
+    /** 更新触发器内显示已选标签 */
+    private _selectedInputShow() {
+        if (!this.selectedArea) return;
         const names: string[] = [];
         this.selectData.forEach((d) => {
             const name = Object.keys(this.select).find(key => this.select[key] === d);
             if (name) names.push(name);
         });
-        selectedDom.innerHTML = '';
+        this.selectedArea.innerHTML = '';
         if (this.limitNumber === 1) {
             const span = document.createElement('span');
             span.className = 'truncate';
-            span.textContent = names[0] || '';
-            selectedDom.appendChild(span);
+            span.textContent = names[0] || this.placeholder;
+            this.selectedArea.appendChild(span);
+            return;
+        }
+        if (names.length === 0) {
+            this.selectedArea.textContent = this.placeholder;
             return;
         }
         for (const name of names) {
-            const span = document.createElement('span');
-            span.className = 'badge badge-sm bg-base-300 text-base-content mx-0.5 truncate';
-            span.textContent = name;
-            span.title = name;
-            selectedDom.appendChild(span);
+            const badge = document.createElement('span');
+            badge.className = 'badge badge-sm badge-ghost gap-1';
+            badge.innerHTML = `${name} <button class="btn btn-ghost btn-xs p-0 hover:bg-transparent" data-value="${this.select[name]}">✕</button>`;
+            // 移除单个标签
+            badge.querySelector('button')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._onOptionToggle(this.select[name]!, true);
+            });
+            this.selectedArea.appendChild(badge);
         }
     }
 
+    /** 构建选项列表（同原逻辑） */
     private _buildOptions(): Record<string, any>[] {
         const tree: Record<string, any>[] = [];
-        const select = this.select;
         let line = 0;
-        for (const [name, value] of Object.entries(select)) {
+        for (const [name, value] of Object.entries(this.select)) {
             this.value_line_hash[value] = line;
             line++;
             tree.push({
@@ -51,6 +62,7 @@ export class Selector extends Select {
         return tree;
     }
 
+    /** 搜索输入框 */
     private _buildSearchInput(): Record<string, any> {
         return {
             tag: 'input',
@@ -78,6 +90,43 @@ export class Selector extends Select {
         };
     }
 
+    /** 切换选项状态 */
+    private _onOptionToggle(value: string, forceDelete = false) {
+        const isSelected = this.selectData.includes(value);
+        if (forceDelete || isSelected) {
+            this._tagCal(value, SELECTOR_MODE.Delete);
+            // 更新菜单项样式
+            const a = this.dropdownWrapper?.querySelector(`a[data-value="${value}"]`);
+            if (a) {
+                a.removeAttribute('active');
+                const check = a.querySelector('.check-icon');
+                if (check) check.remove();
+            }
+            this._selectedInputShow();
+            if (this.selectData.length === 0 && this.selectedArea) {
+                this.selectedArea.textContent = this.placeholder;
+            }
+        } else {
+            this._tagCal(value, SELECTOR_MODE.Insert);
+            if (this.limitNumber > 0 && this.selectData.length > this.limitNumber) {
+                // 超出限制，移除最早的选中项
+                const removedValue = this.selectData[0];
+                this._tagCal(removedValue, SELECTOR_MODE.Delete);
+                const removedA = this.dropdownWrapper?.querySelector(`a[data-value="${removedValue}"]`);
+                if (removedA) {
+                    removedA.removeAttribute('active');
+                    removedA.querySelector('.check-icon')?.remove();
+                }
+            }
+            const a = this.dropdownWrapper?.querySelector(`a[data-value="${value}"]`);
+            if (a) {
+                a.setAttribute('active', '1');
+                a.insertAdjacentHTML('beforeend', `<span class="check-icon">${Icon.check}</span>`);
+            }
+            this._selectedInputShow();
+        }
+    }
+
     make(): this {
         const directionClassMap: Record<number, string> = {
             [SELECTOR_DIRECTION.Down]: 'dropdown-bottom',
@@ -94,17 +143,18 @@ export class Selector extends Select {
 
         const dropdownWrapper = document.createElement('div');
         dropdownWrapper.className = `dropdown ${dirClass} w-full`;
-        this.dropdownWrapper = dropdownWrapper;  // 保存引用，便于销毁
+        this.dropdownWrapper = dropdownWrapper;
 
-        const trigger = document.createElement('label');
+        // ───────── 触发器（仿原生 select 样式） ─────────
+        const trigger = document.createElement('div');
         trigger.tabIndex = 0;
-        trigger.className = 'btn btn-sm flex items-center gap-1 justify-between leading-none';
-        const selectedArea = document.createElement('span');
-        selectedArea.className = 'selected-area flex items-center gap-1 truncate';
-        selectedArea.textContent = this.placeholder;
-        trigger.appendChild(selectedArea);
-        trigger.appendChild(createDOMFromTree({ tag: 'span', textContent: '▼', className: 'text-xs' }));
+        trigger.className = 'select select-bordered flex items-center gap-2 min-h-[2.5rem] h-auto cursor-pointer py-1 px-3';
+        this.selectedArea = document.createElement('div');
+        this.selectedArea.className = 'flex flex-wrap items-center gap-1 flex-1';
+        this.selectedArea.textContent = this.placeholder;
+        trigger.appendChild(this.selectedArea);
 
+        // ───────── 下拉内容 ─────────
         const dropdownContent = document.createElement('div');
         dropdownContent.className = 'dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 mt-1 hidden z-50';
 
@@ -129,29 +179,8 @@ export class Selector extends Select {
             a.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const name = a.getAttribute('data-name')!;
                 const value = a.getAttribute('data-value')!;
-                if (this.selectData.indexOf(value) !== -1) {
-                    this._tagCal(value, SELECTOR_MODE.Delete);
-                    a.removeAttribute('active');
-                    const checkIcon = a.querySelector('.check-icon');
-                    if (checkIcon) checkIcon.remove();
-                    this._selectedInputShow(selectedArea);
-                    if (this.selectData.length === 0) selectedArea.textContent = this.placeholder;
-                } else {
-                    this._tagCal(value, SELECTOR_MODE.Insert);
-                    if (this.limitNumber > 0 && this.selectData.length > this.limitNumber) {
-                        this.triggerEvent.enable = false;
-                        const firstVal = this.selectData[0];
-                        const firstIdx = this.value_line_hash[firstVal] + 1;
-                        const popOpt = dropdownContent.querySelector(`li:nth-child(${firstIdx}) a`) as HTMLElement;
-                        if (popOpt) popOpt.click();
-                        this.triggerEvent.enable = true;
-                    }
-                    a.setAttribute('active', '1');
-                    a.insertAdjacentHTML('beforeend', `<span class="check-icon">${Icon.check}</span>`);
-                    this._selectedInputShow(selectedArea);
-                }
+                this._onOptionToggle(value);
             });
             li.appendChild(a);
             ul.appendChild(li);
@@ -162,6 +191,7 @@ export class Selector extends Select {
         dropdownWrapper.appendChild(dropdownContent);
         this.parentNode.appendChild(dropdownWrapper);
 
+        // 开关下拉
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
             dropdownContent.classList.toggle('hidden');
@@ -174,8 +204,13 @@ export class Selector extends Select {
         };
         this.globalEvents.add(document, 'click', closeDropdown);
 
+        // 初始化
         (async () => {
             this.delayExec();
+            if (this.selectedData.length > 0) {
+                this.selectedData.forEach(v => this._onOptionToggle(v, true)); // 先同步状态
+                this._selectedInputShow();
+            }
             if (this.show) {
                 dropdownContent.classList.remove('hidden');
             }
@@ -185,14 +220,11 @@ export class Selector extends Select {
     }
 
     public destroy() {
-        // 清除搜索定时器
         if (this.searchTimer) {
             clearTimeout(this.searchTimer);
             this.searchTimer = null;
         }
-        // 移除全局事件
         this.globalEvents.removeAll();
-        // 移除 DOM（精确移除自身创建的 dropdown 容器）
         if (this.dropdownWrapper && this.dropdownWrapper.parentNode) {
             this.dropdownWrapper.parentNode.removeChild(this.dropdownWrapper);
             this.dropdownWrapper = null;
