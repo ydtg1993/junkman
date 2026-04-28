@@ -35,7 +35,7 @@ npm run dev
 
 ```html
 <!DOCTYPE html>
-<html data-theme="dark">
+<html>
 <head>
   <link href="./junkman.css" rel="stylesheet">
 </head>
