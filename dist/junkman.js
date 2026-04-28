@@ -4330,109 +4330,141 @@ var junkman = (function (exports) {
 
     class SidebarTabs {
         constructor(options) {
-            var _a;
             this.contentContainer = null;
-            this.navLinks = new Map();
+            this.allLeafLinks = new Map();
             this.container = typeof options.container === 'string'
                 ? document.querySelector(options.container)
                 : options.container;
             if (!this.container)
                 throw new Error('SidebarTabs container not found');
             this.options = options;
-            this.activeTarget = options.defaultActive || ((_a = options.items[0]) === null || _a === void 0 ? void 0 : _a.target) || '';
+            this.activeTarget = options.defaultActive || '';
             this.render();
         }
-        /**
-         * 完整渲染布局：左侧导航 + 右侧内容
-         */
         render() {
             this.container.innerHTML = '';
             this.container.className = 'layout';
-            // 左侧导航
             const sidebar = document.createElement('nav');
             sidebar.className = 'sidebar';
             const title = document.createElement('h2');
             title.textContent = '🧩 Junkman';
             sidebar.appendChild(title);
-            let currentGroup = '';
-            for (const item of this.options.items) {
-                // 分组标题
-                if (item.group && item.group !== currentGroup) {
-                    const groupTitle = document.createElement('div');
-                    groupTitle.className = 'group-title';
-                    groupTitle.textContent = item.group;
-                    sidebar.appendChild(groupTitle);
-                    currentGroup = item.group;
-                }
-                const link = document.createElement('a');
-                link.setAttribute('data-target', item.target);
-                link.textContent = item.label;
-                if (item.target === this.activeTarget) {
-                    link.classList.add('active');
-                }
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.navigateTo(item.target);
-                });
-                sidebar.appendChild(link);
-                this.navLinks.set(item.target, link);
-            }
-            // 右侧内容
+            const menu = document.createElement('ul');
+            menu.className = 'menu menu-xs bg-base-100 rounded-lg w-full';
+            this.buildMenu(this.options.items, menu);
+            sidebar.appendChild(menu);
             const content = document.createElement('main');
-            const contentId = this.options.contentId || 'mainContent';
-            content.id = contentId;
+            content.id = this.options.contentId || 'mainContent';
             content.className = 'content';
             this.contentContainer = content;
             this.container.appendChild(sidebar);
             this.container.appendChild(content);
-            // 渲染默认激活的内容
-            this.navigateTo(this.activeTarget, true);
+            // 激活默认项或第一个可用叶子项
+            const firstLeaf = this.findFirstLeaf(this.options.items);
+            const targetToActivate = this.activeTarget || (firstLeaf === null || firstLeaf === void 0 ? void 0 : firstLeaf.target) || '';
+            if (targetToActivate) {
+                this.navigateTo(targetToActivate, true);
+            }
         }
-        /**
-         * 获取某项配置
-         */
-        getItem(target) {
-            return this.options.items.find(i => i.target === target);
+        /** 递归构建 DaisyUI menu 结构（支持多级折叠） */
+        buildMenu(items, parentUl) {
+            for (const item of items) {
+                const li = document.createElement('li');
+                if (item.sub && item.sub.length > 0) {
+                    // 有子菜单：使用 <details> 实现折叠
+                    const details = document.createElement('details');
+                    const summary = document.createElement('summary');
+                    summary.textContent = item.label;
+                    details.appendChild(summary);
+                    // 若自身有 target，点击 summary 时也可导航（需阻止默认折叠行为）
+                    if (item.target) {
+                        summary.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.navigateTo(item.target);
+                            // 展开/折叠状态
+                            details.open = !details.open;
+                        });
+                    }
+                    const ul = document.createElement('ul');
+                    this.buildMenu(item.sub, ul);
+                    details.appendChild(ul);
+                    li.appendChild(details);
+                }
+                else {
+                    // 叶子节点
+                    const a = document.createElement('a');
+                    a.textContent = item.label;
+                    a.setAttribute('data-target', item.target || '');
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (item.target)
+                            this.navigateTo(item.target);
+                    });
+                    li.appendChild(a);
+                    if (item.target) {
+                        this.allLeafLinks.set(item.target, a);
+                    }
+                }
+                parentUl.appendChild(li);
+            }
         }
-        /**
-         * 切换到指定 target
-         */
+        /** 查找第一个叶子节点 */
+        findFirstLeaf(items) {
+            for (const item of items) {
+                if (item.sub) {
+                    const found = this.findFirstLeaf(item.sub);
+                    if (found)
+                        return found;
+                }
+                else if (item.target) {
+                    return item;
+                }
+            }
+            return null;
+        }
+        /** 根据 target 查找项 */
+        findItem(items, target) {
+            for (const item of items) {
+                if (item.target === target)
+                    return item;
+                if (item.sub) {
+                    const found = this.findItem(item.sub, target);
+                    if (found)
+                        return found;
+                }
+            }
+            return null;
+        }
+        /** 切换到指定 target */
         navigateTo(target, isInitial = false) {
-            var _a;
+            var _a, _b, _c;
             if (!isInitial && target === this.activeTarget)
                 return;
-            // 更新导航激活状态
-            const oldLink = this.navLinks.get(this.activeTarget);
+            // 更新激活状态
+            const oldLink = this.allLeafLinks.get(this.activeTarget);
             if (oldLink)
                 oldLink.classList.remove('active');
-            const newLink = this.navLinks.get(target);
+            const newLink = this.allLeafLinks.get(target);
             if (newLink)
                 newLink.classList.add('active');
             this.activeTarget = target;
-            // 渲染内容
-            const item = this.getItem(target);
+            const item = this.findItem(this.options.items, target);
             if (item === null || item === void 0 ? void 0 : item.render) {
                 if (this.contentContainer) {
                     this.contentContainer.innerHTML = item.render();
                 }
-                // 内容渲染后执行初始化
                 (_a = item.afterRender) === null || _a === void 0 ? void 0 : _a.call(item);
             }
             else {
-                // 无渲染函数时显示提示
                 if (this.contentContainer) {
                     this.contentContainer.innerHTML = '<div class="demo-section"><h2>请从左侧选择组件</h2></div>';
                 }
             }
+            (_c = (_b = this.options).onAfterRender) === null || _c === void 0 ? void 0 : _c.call(_b, target);
         }
-        /**
-         * 销毁组件
-         */
         destroy() {
-            this.navLinks.forEach(link => {
-                link.removeEventListener('click', () => { });
-            });
-            this.navLinks.clear();
+            this.allLeafLinks.forEach(link => link.removeEventListener('click', () => { }));
+            this.allLeafLinks.clear();
             this.container.innerHTML = '';
             this.contentContainer = null;
         }

@@ -9,18 +9,19 @@ module.exports = {
         'alert-success',
         'alert-warning',
         'alert-error',
-        // 如果有需要，也可保留其他动态类
+
+        'toggle',
+        'toggle-sm',
+        'toggle-md',
+        'toggle-lg',
     ],
     plugins: [
-        require('@tailwindcss/forms'),
-        require('@tailwindcss/typography'),
         require("daisyui")
     ],
     daisyui: {
         themes: ["light", "dark"],
-        darkTheme: "dark",
         base: true,
         styled: true,
         utils: true,
     },
-}
+};

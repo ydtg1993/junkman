@@ -2,7 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ────────────── 级联树展开图标动画 ────────────── */
+/* ============================================================
+   全局布局（供 SidebarTabs 使用）
+   ============================================================ */
+.layout {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 240px;
+    background-color: hsl(var(--b2));
+    border-right: 1px solid hsl(var(--b3));
+    overflow-y: auto;
+    padding: 1rem;
+    flex-shrink: 0;
+}
+
+.sidebar h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: hsl(var(--p));
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid hsl(var(--b3));
+}
+
+.sidebar .group-title {
+    font-weight: bold;
+    margin: 1rem 0 0.3rem 0;
+    color: hsl(var(--bc) / 0.5);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.sidebar a {
+    display: block;
+    padding: 0.4rem 0.5rem;
+    color: hsl(var(--bc) / 0.7);
+    text-decoration: none;
+    border-radius: 0.3rem;
+    transition: background 0.2s;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+    background-color: hsl(var(--b3));
+    color: hsl(var(--bc));
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background-color: hsl(var(--b1));
+}
+
+/* ============================================================
+   级联树展开图标动画
+   ============================================================ */
 details[open] > summary > .expand-icon {
     transform: rotate(90deg);
 }
@@ -11,7 +70,9 @@ details[open] > summary > .expand-icon {
     transition: transform 0.2s;
 }
 
-/* ────────────── 拖拽占位符样式 ────────────── */
+/* ============================================================
+   拖拽排序占位符
+   ============================================================ */
 .sortable-placeholder {
     background: rgba(0, 0, 0, 0.05);
     border: 2px dashed #999;
@@ -19,8 +80,25 @@ details[open] > summary > .expand-icon {
     box-sizing: border-box;
 }
 
-/* ────────────── 全局辅助样式 ────────────── */
-/* 右键菜单防止溢出 */
+/* 拖拽幽灵元素禁止交互 */
+.sortable-dragging {
+    touch-action: none;
+    user-select: none;
+}
+
+/* ============================================================
+   表格固定列阴影（可选增强效果）
+   ============================================================ */
+.sticky-left {
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+.sticky-right {
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================================
+   级联右键菜单防溢出
+   ============================================================ */
 .cascade-context-menu {
     max-width: 280px;
     overflow: hidden;
@@ -28,16 +106,13 @@ details[open] > summary > .expand-icon {
     white-space: nowrap;
 }
 
-/* 拖拽时的幽灵元素禁止交互 */
-.sortable-dragging {
-    touch-action: none;
-    user-select: none;
+/* ============================================================
+   DaisyUI 菜单折叠箭头动画（SidebarTabs 子菜单）
+   ============================================================ */
+.menu details[open] > summary::after {
+    transform: rotate(225deg) translateY(0.5px);
 }
 
-/* 表格固定列阴影（可选，增强视觉效果） */
-.sticky-left {
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-}
-.sticky-right {
-    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+.menu summary::after {
+    transition: transform 0.2s;
 }
