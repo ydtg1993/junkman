@@ -219,8 +219,8 @@
         return renderSection('🌲 dimensionalTree 树展平', '用于级联组件的核心工具。', api, demo);
     }
 
-    function renderMenu() {
-        const api = `<pre><code>new junkman.selector.Menu(data, options)</code></pre>
+    function renderDropdown() {
+        const api = `<pre><code>new junkman.Dropdown(data, options)</code></pre>
       <h3>参数</h3>
       <table class="api-table">
         <tr><th>参数</th><th>类型</th><th>说明</th></tr>
@@ -233,12 +233,12 @@
       </table>
       <p><b>方法：</b> <code>selected([values])</code>, <code>make()</code>, <code>destroy()</code></p>`;
         const demo = `<div id="menuDemo"></div>`;
-        return renderSection('📋 Menu 下拉菜单', '多选下拉，支持搜索。', api, demo);
+        return renderSection('📋 Dropdown 下拉菜单', '多选下拉，支持搜索。', api, demo);
     }
 
     function renderSwitcher() {
-        const api = `<pre><code>new junkman.selector.Switcher(data, options)</code></pre>
-      <h3>参数同 Menu</h3>
+        const api = `<pre><code>new junkman.Switcher(data, options)</code></pre>
+      <h3>参数同 Dropdown</h3>
       <p><b>特有：</b> <code>options.towards</code> 控制排列方向（Horizontal/Vertical）</p>
       <p><b>方法：</b> <code>selected(values)</code>, <code>make()</code>, <code>destroy()</code></p>`;
         const demo = `<div id="switcherDemo"></div>`;
@@ -467,16 +467,16 @@
             result.textContent = JSON.stringify(flat, (key, val) => key === 'originalNode' ? undefined : val, 2);
         }
     }
-    function initMenu() {
+    function initDropdown() {
         const container = document.getElementById('menuDemo');
-        new junkman.selector.Menu({ "苹果": "1", "香蕉": "2", "橙子": "3" }, {
+        new junkman.Dropdown({ "苹果": "1", "香蕉": "2", "橙子": "3" }, {
             limit: 2, placeholder: "请选择水果", menuMaxHeight: "200px",
             trigger: (d) => toast.show({ message: `选中: ${d.value}`, type: 'success' }), parentNode: container
         }).selected(['2']).make();
     }
     function initSwitcher() {
         const container = document.getElementById('switcherDemo');
-        new junkman.selector.Switcher({ "男": "male", "女": "female" }, {
+        new junkman.Switcher({ "男": "male", "女": "female" }, {
             limit: 1, towards: junkman.SELECTOR_TOWARDS.Horizontal,
             trigger: (d) => toast.show({ message: `切换为: ${d.value}`, type: 'success' }), parentNode: container
         }).selected(['male']).make();
@@ -540,7 +540,7 @@
                         }},
                     { label: '禁用', content: '不可用', disabled: true }
                 ],
-                type: 'boxed',
+                type: 'lifted',
                 lazy: true
             });
         }
@@ -611,7 +611,7 @@
             { target: 'dombuilder', label: 'createDOMFromTree', group: '基础工具', render: renderDOMBuilder, afterRender: initDOMBuilder },
             { target: 'icons', label: 'Icon 图标', group: '基础工具', render: renderIcons },
             { target: 'dimensionalTree', label: 'dimensionalTree', group: '基础工具', render: renderDimensionalTree, afterRender: initDimensionalTree },
-            { target: 'menu', label: 'Menu 下拉菜单', group: '选择器', render: renderMenu, afterRender: initMenu },
+            { target: 'dropdown', label: 'Dropdown 下拉菜单', group: '选择器', render: renderDropdown, afterRender: initDropdown },
             { target: 'switcher', label: 'Switcher 开关', group: '选择器', render: renderSwitcher, afterRender: initSwitcher },
             { target: 'paginator', label: 'Paginator 分页器', group: '选择器', render: renderPaginator, afterRender: initPaginator },
             { target: 'cascadeselector', label: 'CascadeSelector', group: '级联', render: renderCascadeSelector, afterRender: initCascadeSelector },

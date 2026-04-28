@@ -50,12 +50,10 @@ export { ToastPosition } from './utils/toast/index';
 export { Tabs } from './utils/tabs/index';
 
 // ============================================================
-// 📋 选择器组件
+// 📋 选择类组件
 // ============================================================
-
-// 由于 Menu 和 Switcher 需要通过命名空间向外暴露，这里先导入再使用
-import { Menu as MenuClass } from './utils/selector/menu';
-import { Switcher as SwitcherClass } from './utils/selector/switcher';
+export { Dropdown } from './utils/selector/dropdown';
+export { Switcher } from './utils/selector/switcher';
 
 /** 选择器相关枚举（方向、朝向、模式） */
 export { SELECTOR_DIRECTION, SELECTOR_TOWARDS, SELECTOR_MODE } from './utils/selector/init';
@@ -111,14 +109,6 @@ export { Paginator } from './utils/selector/paginator';
 
 /** 侧边栏导航 + 内容切换组件（SidebarTabs），常用于文档或配置页面 */
 export { SidebarTabs } from './utils/sidebartabs/index';
-
-// ============================================================
-// 📦 兼容性命名空间（保留旧的 selector 对象写法）
-// ============================================================
-export const selector = {
-    Menu: MenuClass,
-    Switcher: SwitcherClass,
-};
 
 // ============================================================
 // 🏷️ TypeScript 类型导出

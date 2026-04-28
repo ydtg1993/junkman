@@ -2,7 +2,7 @@ import { Sortable } from '../sortable';
 import { Icon } from '../../aid/icon';
 import { request } from '../../aid/request';
 import { ImgDelay } from '../../aid/imgdelay';
-import { Menu } from '../selector/menu';
+import { Dropdown } from '../selector/dropdown';
 import { Switcher } from '../selector/switcher';
 import { SELECTOR_DIRECTION } from '../selector/init';
 
@@ -79,7 +79,7 @@ export class EditableTable {
 
     // 用于清理的资源
     private imgDelayCleanup: (() => void) | null = null;
-    private menuInstances: Menu[] = [];
+    private menuInstances: Dropdown[] = [];
     private switcherInstances: Switcher[] = [];
     private eventCleanups: (() => void)[] = [];
 
@@ -404,7 +404,7 @@ export class EditableTable {
                     const menuContainer = document.createElement('div');
                     menuContainer.style.width = '100%';
                     const currentOption = col.options?.list?.find(opt => String(opt.key) === String(value));
-                    const menu = new Menu(selectData, {
+                    const menu = new Dropdown(selectData, {
                         limit: col.options?.multiple ? 0 : 1,
                         searchOff: true,
                         placeholder: currentOption?.value || '请选择',

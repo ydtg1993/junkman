@@ -4,7 +4,7 @@ import { Icon } from "../../aid/icon";
 import { createDOMFromTree } from "../../aid/dombuilder";
 import { GlobalEventManager } from "../../aid/eventmanager";
 
-export class Menu extends Selector implements SelectorInterface {
+export class Dropdown extends Selector implements SelectorInterface {
     private globalEvents = new GlobalEventManager();
     private dropdownWrapper: HTMLElement | null = null;
     private searchTimer: number | null = null;

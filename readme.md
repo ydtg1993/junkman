@@ -73,7 +73,7 @@ npm run dev
     │   ├── cascade/       # 级联选择器 / 树形管理器
     │   ├── formbuilder/   # 表单构建器
     │   ├── modal/         # 模态框
-    │   ├── selector/      # 选择器（Menu, Switcher, Paginator）
+    │   ├── selector/      # 选择器（Dropdown, Switcher, Paginator）
     │   ├── sortable/      # 拖拽排序
     │   └── table/         # 可编辑表格
     ├── index.ts           # 统一导出入口

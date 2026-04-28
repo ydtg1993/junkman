@@ -995,7 +995,7 @@ var junkman = (function (exports) {
         }
     }
 
-    class Menu extends Selector {
+    class Dropdown extends Selector {
         constructor() {
             super(...arguments);
             this.globalEvents = new GlobalEventManager();
@@ -3648,7 +3648,7 @@ var junkman = (function (exports) {
                         const menuContainer = document.createElement('div');
                         menuContainer.style.width = '100%';
                         const currentOption = (_h = (_g = col.options) === null || _g === void 0 ? void 0 : _g.list) === null || _h === void 0 ? void 0 : _h.find(opt => String(opt.key) === String(value));
-                        const menu = new Menu(selectData, {
+                        const menu = new Dropdown(selectData, {
                             limit: ((_j = col.options) === null || _j === void 0 ? void 0 : _j.multiple) ? 0 : 1,
                             searchOff: true,
                             placeholder: (currentOption === null || currentOption === void 0 ? void 0 : currentOption.value) || '请选择',
@@ -4406,17 +4406,9 @@ var junkman = (function (exports) {
         }
     }
 
-    // ============================================================
-    // ============================================================
-    // 📦 兼容性命名空间（保留旧的 selector 对象写法）
-    // ============================================================
-    const selector = {
-        Menu: Menu,
-        Switcher: Switcher,
-    };
-
     exports.CascadeSelector = CascadeSelector;
     exports.CascadeTree = CascadeTree;
+    exports.Dropdown = Dropdown;
     exports.EditableTable = EditableTable;
     exports.FormBuilder = FormBuilder;
     exports.GlobalEventManager = GlobalEventManager;
@@ -4426,13 +4418,13 @@ var junkman = (function (exports) {
     exports.Paginator = Paginator;
     exports.SidebarTabs = SidebarTabs;
     exports.Sortable = Sortable;
+    exports.Switcher = Switcher;
     exports.Tabs = Tabs;
     exports.Toast = Toast;
     exports.contextmenu = contextmenu;
     exports.createDOMFromTree = createDOMFromTree;
     exports.dimensionalTree = dimensionalTree;
     exports.request = request;
-    exports.selector = selector;
 
     Object.defineProperty(exports, '__esModule', { value: true });
 
