@@ -57,31 +57,6 @@ npm run dev
 </html>
 ```
 
-### 📂 项目结构
-
-    src/
-    ├── aid/               # 基础工具
-    │   ├── contextmenu.ts
-    │   ├── dombuilder.ts
-    │   ├── eventmanager.ts
-    │   ├── icon.ts
-    │   ├── imgdelay.ts
-    │   ├── random.ts
-    │   ├── request.ts
-    │   └── tree.ts
-    ├── utils/
-    │   ├── cascade/       # 级联选择器 / 树形管理器
-    │   ├── formbuilder/   # 表单构建器
-    │   ├── modal/         # 模态框
-    │   ├── selector/      # 选择器（Selector, Switcher, Paginator）
-    │   ├── sortable/      # 拖拽排序
-    │   └── table/         # 可编辑表格
-    ├── index.ts           # 统一导出入口
-    ├── tailwind.css       # Tailwind + DaisyUI 入口样式
-    └── (其他配置文件)
-
-> 所有组件均提供 destroy() 方法，用于彻底清理事件和 DOM。
-
 ### 📖 交互式文档
 
 #### [在线演示文档](https://codepen.io/ydtg1993-the-bashful/pen/bNBbqQW)
