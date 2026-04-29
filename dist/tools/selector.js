@@ -7,7 +7,7 @@ function renderSelector() {
       <tr><td>data</td><td>选项映射 {label: value}</td></tr>
       <tr><td>options.limit</td><td>最多选中数</td></tr>
       <tr><td>options.placeholder</td><td>占位文本</td></tr>
-      <tr><td>options.direction</td><td>弹出方向 Down,Up,Mid,Right,RightUp,RightMid,Left,LeftUp,LeftMid,</td></tr></table>`;
+      <tr><td>options.direction</td><td>弹出方向 Down | Up | Mid | Right | RightUp | RightMid | Left | LeftUp | LeftMid,</td></tr></table>`;
     const demo = `<div id="selectorTabs" class="mt-4"></div>`;
     return renderSection('📋 Selector 下拉选择器', '多选下拉，支持搜索。', api, demo);
 }
@@ -116,15 +116,15 @@ function initSelectorTabs() {
     const effectDiv = document.createElement('div');
     effectDiv.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+            <div class="mb-4">
                 <p class="font-bold mb-1">1️⃣ 单选（limit:1）</p>
                 <div id="selectorSingle"></div>
             </div>
-            <div>
+            <div class="mb-4">
                 <p class="font-bold mb-1">2️⃣ 多选（limit:3）</p>
                 <div id="selectorMulti"></div>
             </div>
-            <div>
+            <div class="mb-4">
                 <p class="font-bold mb-1">3️⃣ 方向朝上 Up</p>
                 <div id="selectorAuto"></div>
             </div>
@@ -184,11 +184,11 @@ function initSwitcherTabs() {
     const effectDiv = document.createElement('div');
     effectDiv.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            <div class="mb-4">
                 <p class="font-bold mb-1">横向布局 (towards: Horizontal)</p>
                 <div id="switcherHorizontal"></div>
             </div>
-            <div>
+            <div class="mb-4">
                 <p class="font-bold mb-1">纵向布局 (towards: Vertical)</p>
                 <div id="switcherVertical"></div>
             </div>
