@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Junkman 组件库 - 完整文档</title>
-    <script src="./junkman.js?v9"></script>
-    <link href="./junkman.css?v9" rel="stylesheet"/>
+    <script src="./junkman.js?v11"></script>
+    <link href="./junkman.css?v11" rel="stylesheet"/>
     <style>
         :root { --sidebar-width: 240px; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -78,6 +78,8 @@
 <body>
 <div id="app"></div>
 </body>
+<script src="table.js"></script>
+<script src="selector.js"></script>
 <script>
     // ========== 全局 Toast ==========
     const toast = new junkman.Toast(junkman.ToastPosition.TopRight);
@@ -182,24 +184,6 @@
         return renderSection('🌲 dimensionalTree 树展平', '用于级联组件的核心工具。', api, demo);
     }
 
-    function renderSelector() {
-        const api = `<pre><code>new junkman.Selector(data, options)</code></pre>
-      <h3>参数</h3>
-      <table class="api-table"><tr><th>参数</th><th>说明</th></tr>
-        <tr><td>data</td><td>选项映射 {label: value}</td></tr>
-        <tr><td>limit</td><td>最多选中数</td></tr>
-        <tr><td>placeholder</td><td>占位文本</td></tr></table>`;
-        const demo = `<div id="selectorDemo"></div>`;
-        return renderSection('📋 Selector 下拉选择器', '多选下拉，支持搜索。', api, demo);
-    }
-
-    function renderSwitcher() {
-        const api = `<pre><code>new junkman.Switcher(data, options)</code></pre>
-      <p><b>特有：</b> <code>options.towards</code> 控制排列方向</p>`;
-        const demo = `<div id="switcherDemo"></div>`;
-        return renderSection('🔘 Switcher 切换器', '按钮组单选/多选切换。', api, demo);
-    }
-
     function renderPaginator() {
         const api = `<pre><code>new junkman.Paginator(container, options)</code></pre>
       <h3>选项</h3>
@@ -231,13 +215,6 @@
         <tr><td>loadChildren</td><td>懒加载</td></tr></table>`;
         const demo = `<div id="cascadeTreeDemo" class="bg-base-100 rounded-lg" style="min-height:250px"></div>`;
         return renderSection('🌳 CascadeTree 树形管理器', '右键菜单增删改查、拖拽排序。', api, demo);
-    }
-
-    function renderEditableTable() {
-        const api = `<pre><code>new junkman.EditableTable(selector, columns, options)</code></pre>
-      <h3>Column 类型</h3><p>支持 text, input, select, switcher 等。</p>`;
-        const demo = `<div id="tableDemo"></div><button id="getTableDataBtn" class="btn btn-sm btn-outline mt-2">获取表格数据</button>`;
-        return renderSection('📊 EditableTable 可编辑表格', '内联编辑、排序、批量操作。', api, demo);
     }
 
     function renderSortable() {
@@ -366,22 +343,6 @@
         }
     }
 
-    function initSelector() {
-        const container = document.getElementById('selectorDemo');
-        new junkman.Selector({ "苹果": "1", "香蕉": "2", "橙子": "3" }, {
-            limit: 2, placeholder: "请选择水果", menuMaxHeight: "200px",
-            trigger: (d) => toast.show({ message: `选中值: ${d.value}`, type: 'success' }), parentNode: container
-        }).selected(['2']).make();
-    }
-
-    function initSwitcher() {
-        const container = document.getElementById('switcherDemo');
-        new junkman.Switcher({ "男": "male", "女": "female" }, {
-            limit: 1, towards: junkman.SELECTOR_TOWARDS.Horizontal,
-            trigger: (d) => toast.show({ message: `切换为: ${d.value}`, type: 'success' }), parentNode: container
-        }).selected(['male']).make();
-    }
-
     function initPaginator() {
         const container = document.getElementById('paginatorDemo');
         if (container) {
@@ -414,22 +375,6 @@
             onUpdate: async (node, val) => { toast.show({ message: `更新: ${node.val} → ${val}`, type: 'success' }); return true; },
             onInsert: async (parentKey, newNode) => { toast.show({ message: `新增子节点: ${newNode.val}`, type: 'success' }); return true; }
         });
-    }
-
-    function initEditableTable() {
-        const container = document.getElementById('tableDemo');
-        const columns = [
-            { name: "ID", field: "id", type: "text", width: "60px" },
-            { name: "姓名", field: "name", type: "input", editable: true },
-            { name: "城市", field: "city", type: "select", options: { list: [{key:"京",value:"北京"},{key:"沪",value:"上海"}] } },
-            { name: "头像", field: "avatar", type: "image", delay: false }
-        ];
-        const table = new junkman.EditableTable(container, columns, { sortable: true, deletable: true });
-        table.loadData([
-            { id:1, name:"张三", city:"京", avatar:"https://picsum.photos/40/40?random=1" },
-            { id:2, name:"李四", city:"沪", avatar:"https://picsum.photos/40/40?random=2" }
-        ]);
-        document.getElementById('getTableDataBtn')?.addEventListener('click', () => alert(JSON.stringify(table.getData(), null, 2)));
     }
 
     function initTabs() {
@@ -555,7 +500,7 @@
                     { target: 'cascadetree', label: 'CascadeTree', render: renderCascadeTree, afterRender: initCascadeTree }
                 ]
             },
-            { target: 'editabletable', label: 'EditableTable', render: renderEditableTable, afterRender: initEditableTable },
+            { target: 'table', label: 'Table', render: renderTable, afterRender: initTable },
             {
                 label: '标签页与导航',
                 sub: [

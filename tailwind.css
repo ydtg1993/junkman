@@ -116,3 +116,24 @@ details[open] > summary > .expand-icon {
 .menu summary::after {
     transition: transform 0.2s;
 }
+
+@layer utilities {
+    .table-scroll-wrapper::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .table-scroll-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .table-scroll-wrapper::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+    }
+    .table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+    .table-scroll-wrapper {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    }
+}

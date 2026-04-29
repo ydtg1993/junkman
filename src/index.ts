@@ -79,8 +79,8 @@ export { CascadeTree } from './utils/cascade/tree';
 // 📊 表格
 // ============================================================
 
-/** 可编辑表格（EditableTable），支持内联编辑、拖拽排序、批量操作 */
-export { EditableTable } from './utils/table';
+/** 表格（Table），支持内联编辑、拖拽排序、批量操作 */
+export { Table } from './utils/table';
 
 // ============================================================
 // 📝 表单构建器

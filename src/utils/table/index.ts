@@ -6,6 +6,7 @@ import { Selector } from '../select/selector';
 import { Switcher } from '../select/switcher';
 import { SELECTOR_DIRECTION } from '../select/types';
 
+// ---------- 类型定义 ----------
 export interface Column {
     name: string;
     field: string;
@@ -29,7 +30,6 @@ export interface Column {
         | 'url'
         | 'selection';
     width?: string;
-    minWidth?: string;
     align?: 'left' | 'center' | 'right';
     pinned?: 'left' | 'right';
     editable?: boolean;
@@ -51,8 +51,8 @@ export interface Column {
 export interface TableOptions {
     sortable?: boolean;
     deletable?: boolean;
-    border?: boolean;
-    zebra?: boolean;
+    border?: boolean;          // 保留但不再生效（始终带边框）
+    zebra?: boolean;           // 保留但不再生效（始终斑马纹）
     hover?: boolean;
     maxHeight?: string;
     updateUrl?: string;
@@ -64,7 +64,8 @@ export interface TableOptions {
     onBatchUpdate?: (rows: any[], field: string, value: any) => Promise<any>;
 }
 
-export class EditableTable {
+// ---------- Table 类 ----------
+export class Table {
     private container: HTMLElement;
     private columns: Column[];
     private data: any[] = [];
@@ -77,7 +78,7 @@ export class EditableTable {
     private selectedRows: Set<number> = new Set();
     private batchBar: HTMLElement | null = null;
 
-    // 用于清理的资源
+    // 资源清理
     private imgDelayCleanup: (() => void) | null = null;
     private menuInstances: Selector[] = [];
     private switcherInstances: Switcher[] = [];
@@ -90,8 +91,8 @@ export class EditableTable {
         this.options = {
             sortable: options.sortable ?? true,
             deletable: options.deletable ?? true,
-            border: options.border ?? true,
-            zebra: options.zebra ?? true,
+            border: options.border ?? true,      // 未使用，统一强制启用
+            zebra: options.zebra ?? true,        // 未使用，统一强制启用
             hover: options.hover ?? true,
             maxHeight: options.maxHeight || '400px',
             updateUrl: options.updateUrl || '',
@@ -109,13 +110,12 @@ export class EditableTable {
     private render() {
         this.container.innerHTML = '';
         const wrapper = document.createElement('div');
-        wrapper.className = 'overflow-x-auto overflow-y-auto';
+        // 关键：统一使用 daisyUI 的边框+背景表，并添加美化滚动条类名
+        wrapper.className = 'overflow-x-auto overflow-y-auto table-scroll-wrapper';
         wrapper.style.maxHeight = this.options.maxHeight;
         this.tableDom = document.createElement('table');
-        let tableCls = 'table table-fixed w-full';
-        if (this.options.zebra) tableCls += ' table-zebra';
-        if (this.options.border) tableCls += ' border border-base-300';
-        this.tableDom.className = tableCls;
+        // 固定样式：斑马纹、边框、背景色
+        this.tableDom.className = 'table table-fixed table-zebra border border-base-300 bg-base-100';
         wrapper.appendChild(this.tableDom);
         this.container.appendChild(wrapper);
 
@@ -200,7 +200,6 @@ export class EditableTable {
                 th.textContent = col.name;
             }
             if (col.width) th.style.width = col.width;
-            if (col.minWidth) th.style.minWidth = col.minWidth;
             th.className = this.getCellClasses(col);
             th.classList.add('sticky', 'top-0', 'z-20', 'bg-base-100');
             tr.appendChild(th);
@@ -232,7 +231,7 @@ export class EditableTable {
             const td = document.createElement('td');
             td.style.padding = '0.25rem 0.5rem';
             td.className = this.getCellClasses(col) + ' align-middle overflow-visible';
-            if (col.minWidth) td.style.minWidth = col.minWidth;
+            if (col.width) td.style.width = col.width;
 
             if (col.type === 'selection') {
                 const checkbox = document.createElement('input');
@@ -410,7 +409,7 @@ export class EditableTable {
                         placeholder: currentOption?.value || '请选择',
                         trigger: (data: any) => this.onCellChange(rowIndex, field, data.value),
                         show: false,
-                        direction: SELECTOR_DIRECTION.Up,
+                        direction: SELECTOR_DIRECTION.Down,
                         parentNode: menuContainer,
                     });
                     menu.make();
@@ -527,12 +526,11 @@ export class EditableTable {
         }
         this.data.splice(index, 1);
 
-        // 调整 selectedRows 中大于被删索引的项
+        // 调整 selectedRows
         const newSelected = new Set<number>();
         this.selectedRows.forEach(i => {
             if (i > index) newSelected.add(i - 1);
             else if (i < index) newSelected.add(i);
-            // 等于 index 的自动移除
         });
         this.selectedRows = newSelected;
 
@@ -557,13 +555,13 @@ export class EditableTable {
 
     // ======================== 公共方法 ========================
     public refresh() {
-        // 清理之前的图片延迟加载定时器及事件
+        // 清理图片延迟加载
         if (this.imgDelayCleanup) {
             this.imgDelayCleanup();
             this.imgDelayCleanup = null;
         }
 
-        // 清理之前的 Menu / Switcher 实例（需手动 destroy 若无 destroy 则至少移除 DOM）
+        // 清理 Menu / Switcher
         this.menuInstances.forEach(menu => menu.destroy?.());
         this.switcherInstances.forEach(switcher => switcher.destroy?.());
         this.menuInstances = [];
@@ -573,13 +571,12 @@ export class EditableTable {
         this.tbodyDom.innerHTML = '';
         this.data.forEach((row, idx) => this.renderRow(row, idx));
 
-        // 重新应用图片延迟加载
+        // 重新应用图片懒加载
         if (this.imgDelayQueue.length) {
             this.imgDelayCleanup = ImgDelay(this.imgDelayQueue, 200, this.imgDelaySettings);
             this.imgDelayQueue = [];
         }
 
-        // 更新批量栏状态
         this.updateBatchBar();
     }
 
@@ -610,7 +607,6 @@ export class EditableTable {
             this.selectedRows.clear();
         }
 
-        // 仅更新所有行内复选框的状态，不重建 DOM，避免破坏其他组件
         const checkboxes = this.tbodyDom.querySelectorAll<HTMLInputElement>('td:first-child input[type="checkbox"]');
         checkboxes.forEach(cb => {
             cb.checked = checked;
@@ -640,22 +636,18 @@ export class EditableTable {
      * 销毁表格，释放所有资源
      */
     public destroy() {
-        // 清理 sortable
         this.sortable?.destroy();
 
-        // 清理图片延迟加载
         if (this.imgDelayCleanup) {
             this.imgDelayCleanup();
             this.imgDelayCleanup = null;
         }
 
-        // 清理所有 Menu/Switcher
         this.menuInstances.forEach(menu => menu.destroy?.());
         this.switcherInstances.forEach(switcher => switcher.destroy?.());
         this.menuInstances = [];
         this.switcherInstances = [];
 
-        // 清空容器
         this.container.innerHTML = '';
     }
 }
