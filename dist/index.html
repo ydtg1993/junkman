@@ -103,6 +103,7 @@
 </script>
 <script src="tools/basic.js"></script>
 <script src="tools/aid.js"></script>
+<script src="tools/paginator.js"></script>
 <script src="tools/table.js"></script>
 <script src="tools/selector.js"></script>
 <script>
@@ -130,18 +131,6 @@
 
     function renderSection(title, desc, apiHTML, demoHTML) {
         return `<div class="demo-section"><h2>${title}</h2><p class="desc">${desc}</p>${apiHTML}<div class="demo-box">${demoHTML}</div></div>`;
-    }
-
-    // ========== 渲染函数 (使用 imgDelay 新名称) ==========
-    function renderPaginator() {
-        const api = `<pre><code>new junkman.Paginator(container, options)</code></pre>
-      <h3>选项</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>total</td><td>总记录数</td></tr>
-        <tr><td>pageSize</td><td>每页条数</td></tr>
-        <tr><td>pageSizeOptions</td><td>每页条数选项</td></tr></table>`;
-        const demo = `<div id="paginatorDemo"></div><div id="paginatorLog" class="text-sm text-gray-400 mt-2 bg-base-100 p-2 rounded"></div>`;
-        return renderSection('📄 Paginator 分页器', '带跳转、每页条数切换。', api, demo);
     }
 
     function renderCascadeSelector() {
@@ -221,23 +210,6 @@
         <tr><td>defaultActive</td><td>默认激活 target</td></tr></table>`;
         const demo = `<div id="sidebarTabsDemo" class="border border-base-300 rounded-lg overflow-hidden" style="height:300px"></div>`;
         return renderSection('🗂️ SidebarTabs 文档布局', '可折叠多级导航 + 内容切换。', api, demo);
-    }
-
-    // ========== 初始化函数 (适配新名称) ==========
-    function initPaginator() {
-        const container = document.getElementById('paginatorDemo');
-        if (container) {
-            const total = 58;
-            new junkman.Paginator(container, {
-                total, pageSize: 10, currentPage: 1,
-                pageSizeOptions: [5, 10, 20],
-                onPageChange: (page, size) => {
-                    const start = (page - 1) * size + 1, end = Math.min(page * size, total);
-                    document.getElementById('paginatorLog').innerHTML = `📄 第${page}页 每页${size}条 显示${start}-${end}`;
-                },
-                onPageSizeChange: (size) => toast.show({message: `每页条数变为 ${size}`, type: 'info'})
-            });
-        }
     }
 
     function initCascadeSelector() {
@@ -386,7 +358,7 @@
                     {target: 'switcher', label: 'Switcher 开关', render: renderSwitcher, afterRender: initSwitcherTabs}
                 ]
             },
-            {target: 'paginator', label: 'Paginator 分页器', render: renderPaginator, afterRender: initPaginator},
+            {target: 'paginator', label: 'Paginator 分页器', render: renderPaginator, afterRender: initPaginatorTabs},
             {
                 label: '级联组件',
                 sub: [
@@ -404,7 +376,7 @@
                     }
                 ]
             },
-            {target: 'table', label: 'Table', render: renderTable, afterRender: initTable},
+            {target: 'table', label: 'Table', render: renderTable, afterRender: initTableTabs},
             {
                 label: '标签页与导航',
                 sub: [
