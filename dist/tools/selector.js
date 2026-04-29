@@ -3,7 +3,7 @@ function renderSelector() {
     const api = `<pre><code>new junkman.Selector(container,data, options)</code></pre>
     <h3>参数</h3>
     <table class="api-table"><tr><th>参数</th><th>说明</th></tr>
-      <tr><td>container</td><td>容器dom, #id查询, .class查询</td></tr>
+      <tr><td>container</td><td>挂载容器[容器dom, #id查询, .class查询]</td></tr>
       <tr><td>data</td><td>选项映射 {label: value}</td></tr>
       <tr><td>options.limit</td><td>最多选中数</td></tr>
       <tr><td>options.placeholder</td><td>占位文本</td></tr>
@@ -17,7 +17,7 @@ function renderSwitcher() {
     <h3>参数</h3>
     <table class="api-table">
       <tr><th>参数</th><th>说明</th></tr>
-      <tr><td>container</td><td>容器dom, #id查询, .class查询</td></tr>
+      <tr><td>container</td><td>挂载容器[容器dom, #id查询, .class查询]</td></tr>
       <tr><td>data</td><td>选项映射 <code>{label: value}</code></td></tr>
       <tr><td>options.limit</td><td>最多选中数，<code>0</code> 为无限制</td></tr>
       <tr><td>options.towards</td><td>排列方向，可选 <code>junkman.SELECTOR_TOWARDS.Horizontal</code>（横向）或 <code>Vertical</code>（纵向）</td></tr>
@@ -52,7 +52,7 @@ function initSelector() {
     ).selected(['red', 'green']).make();
 
     // 方向 Up
-    new junkman.Selector(
+    let s3 = new junkman.Selector(
         '#selectorAuto',
         { "北京": "bj", "上海": "sh", "广州": "gz", "深圳": "sz" },
         {
@@ -62,6 +62,7 @@ function initSelector() {
             trigger: (d) => console.log(`城市: ${d.value}`),
         }
     ).make();
+    s3.selected(["sh"]);
 
     // 含搜索，limit=0
     new junkman.Selector(
@@ -87,7 +88,7 @@ function initSwitcher() {
         }
     ).selected(['male']).make();
 
-    new junkman.Switcher(
+    let s2 = new junkman.Switcher(
         '#switcherVertical',
         { "阅读": "read", "运动": "sport", "音乐": "music", "旅行": "travel" },
         {
@@ -95,7 +96,8 @@ function initSwitcher() {
             towards: junkman.SELECTOR_TOWARDS.Vertical,
             trigger: (d) => console.log(`兴趣爱好: ${d.value}`),
         }
-    ).selected(['read', 'music']).make();
+    ).make();
+    s2.selected(['read', 'music']);
 
     new junkman.Switcher(
         '#switcherMulti',
@@ -209,11 +211,14 @@ new junkman.Switcher(
 ).selected(['male']).make();
 
 // 纵向多选
-new junkman.Switcher(
+s2 = new junkman.Switcher(
     '#switcherVertical',
     { "阅读": "read", "运动": "sport", "音乐": "music", "旅行": "travel" },
     { limit: 0, towards: junkman.SELECTOR_TOWARDS.Vertical, parentNode: document.getElementById('switcherVertical') }
-).selected(['read', 'music']).make();
+).make();
+//动态调用选择
+s2.selected(['read', 'music']);
+
 
 // 横向多选
 new junkman.Switcher(
@@ -239,7 +244,7 @@ function renderToggle() {
         <h3>参数</h3>
         <table class="api-table">
             <tr><th>属性</th><th>说明</th></tr>
-            <tr><td>container</td><td>挂载容器</td></tr>
+            <tr><td>container</td><td>挂载容器[容器dom, #id查询, .class查询]</td></tr>
             <tr><td>size</td><td>尺寸 'sm'|'md'|'lg'</td></tr>
             <tr><td>checked</td><td>初始状态</td></tr>
             <tr><td>onChange</td><td>变化回调</td></tr>
