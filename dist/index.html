@@ -115,43 +115,8 @@
 <script src="tools/sidebartabs.js"></script>
 <script src="tools/sortable.js"></script>
 <script src="tools/cascade.js"></script>
+<script src="tools/modal.js"></script>
 <script>
-    function renderModal() {
-        const api = `<pre><code>new junkman.Modal(options)</code></pre>
-      <h3>选项</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>title</td><td>标题</td></tr>
-        <tr><td>gauze</td><td>点击遮罩关闭</td></tr></table>`;
-        const demo = `<button id="openSimpleModalBtn" class="btn btn-secondary btn-sm">打开简单模态框</button>
-      <button id="openRemoteModalBtn" class="btn btn-primary btn-sm">远程内容模态框</button>
-      <button id="openFormModalBtn" class="btn btn-accent btn-sm">表单提交模态框</button>`;
-        return renderSection('🪟 Modal 模态框', '支持遮罩、远程加载、表单。', api, demo);
-    }
-
-    function initModal() {
-        document.getElementById('openSimpleModalBtn')?.addEventListener('click', () => {
-            const modal = new junkman.Modal({title: '简单模态框', aspect: {width: "400px", height: "auto"}, gauze: true});
-            modal.setContent('<div class="p-4"><h3>内容区域</h3><p>这是一个简单的模态框</p></div>');
-            modal.make();
-        });
-        document.getElementById('openRemoteModalBtn')?.addEventListener('click', () => {
-            const modal = new junkman.Modal({title: '远程加载', aspect: {width: "500px", height: "auto"}, gauze: true});
-            modal.setContent('加载中...');
-            modal.make();
-            setTimeout(() => modal.setLinkContent('<div class="p-4"><h3>动态内容</h3><p>模拟异步加载的 HTML</p></div>'), 1000);
-        });
-        document.getElementById('openFormModalBtn')?.addEventListener('click', () => {
-            const modal = new junkman.Modal({title: '表单模态框', aspect: {width: "400px", height: "auto"}, gauze: true});
-            const form = document.createElement('form');
-            form.innerHTML = '<input name="username" class="input input-bordered input-sm w-full mb-2" placeholder="用户名" /><button type="submit" class="btn btn-sm btn-primary">提交</button>';
-            modal.setContent(form);
-            modal.bindSubmit(async (formData) => {
-                toast.show({message: `提交: ${formData.get('username')}`, type: 'success'});
-            });
-            modal.make();
-        });
-    }
-
     // ========== 使用新的多级 SidebarTabs 构建页面 ==========
     new junkman.SidebarTabs({
         container: '#app',
@@ -215,7 +180,7 @@
                 ]
             },
             {target: 'sortable', label: 'Sortable 拖拽排序', render: renderSortable, afterRender: initSortable},
-            {target: 'modal', label: 'Modal', render: renderModal, afterRender: initModal},
+            {target: 'modal', label: 'Modal 弹窗组件', render: renderModal, afterRender: initModal},
             {
                 label: '辅助工具',
                 sub: [
