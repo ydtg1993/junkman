@@ -6,36 +6,47 @@
     <script src="./junkman.js?v11"></script>
     <link href="./junkman.css?v11" rel="stylesheet"/>
     <style>
-        :root { --sidebar-width: 240px; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
+        :root {
+            --sidebar-width: 240px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
 
         /* ============================================================
    文档内容区域样式（亮色/暗色自动适配）
    ============================================================ */
         .demo-section {
-            background-color: hsl(var(--b2));          /* 次级背景 */
+            background-color: hsl(var(--b2)); /* 次级背景 */
             border-radius: 1rem;
             padding: 1.5rem;
             margin-bottom: 2rem;
-            color: hsl(var(--bc));                    /* 主文字色 */
+            color: hsl(var(--bc)); /* 主文字色 */
         }
 
         .demo-section h2 {
-            color: hsl(var(--p));                     /* 主题主色 */
+            color: hsl(var(--p)); /* 主题主色 */
             margin-bottom: 0.5rem;
             font-size: 1.6rem;
         }
 
         .demo-section .desc {
-            color: hsl(var(--bc) / 0.7);              /* 描述文字稍淡 */
+            color: hsl(var(--bc) / 0.7); /* 描述文字稍淡 */
             margin-bottom: 1rem;
             font-size: 0.95rem;
         }
 
         .demo-section .api-table {
             width: 100%;
-            background-color: hsl(var(--b3) / 0.5);   /* 半透明背景 */
+            background-color: hsl(var(--b3) / 0.5); /* 半透明背景 */
             border-collapse: collapse;
             margin: 1rem 0;
             font-size: 0.9rem;
@@ -57,7 +68,7 @@
         }
 
         .demo-box {
-            background-color: hsl(var(--b3));         /* 示例容器 */
+            background-color: hsl(var(--b3)); /* 示例容器 */
             border-radius: 0.5rem;
             padding: 1rem;
             margin: 0.5rem 0;
@@ -65,7 +76,7 @@
         }
 
         .demo-box pre {
-            background-color: hsl(var(--b2));         /* 代码块背景 */
+            background-color: hsl(var(--b2)); /* 代码块背景 */
             padding: 0.8rem;
             border-radius: 0.4rem;
             overflow-x: auto;
@@ -83,28 +94,37 @@
     function escapeHTML(str) {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
+
     // ========== 全局 Toast ==========
     const toast = new junkman.Toast(junkman.ToastPosition.TopRight);
     const centerToast = new junkman.Toast(junkman.ToastPosition.MiddleCenter);
     window.toast = toast;
     window.centerToast = centerToast;
 </script>
-<script src="table.js"></script>
-<script src="selector.js"></script>
+<script src="tools/basic.js"></script>
+<script src="tools/aid.js"></script>
+<script src="tools/table.js"></script>
+<script src="tools/selector.js"></script>
 <script>
     function getTreeData() {
         return [
-            { key: 1, val: "华北", nodes: [
-                    { key: 11, val: "北京市", nodes: [
-                            { key: 111, val: "东城区", nodes: [] },
-                            { key: 112, val: "西城区", nodes: [] },
-                            { key: 113, val: "朝阳区", nodes: [{ key: 1131, val: "三里屯街道", nodes: [] }] }
-                        ]},
-                    { key: 12, val: "天津市", nodes: [] }
-                ]},
-            { key: 2, val: "华东", nodes: [
-                    { key: 21, val: "上海市", nodes: [{ key: 211, val: "黄浦区", nodes: [] }] }
-                ]}
+            {
+                key: 1, val: "华北", nodes: [
+                    {
+                        key: 11, val: "北京市", nodes: [
+                            {key: 111, val: "东城区", nodes: []},
+                            {key: 112, val: "西城区", nodes: []},
+                            {key: 113, val: "朝阳区", nodes: [{key: 1131, val: "三里屯街道", nodes: []}]}
+                        ]
+                    },
+                    {key: 12, val: "天津市", nodes: []}
+                ]
+            },
+            {
+                key: 2, val: "华东", nodes: [
+                    {key: 21, val: "上海市", nodes: [{key: 211, val: "黄浦区", nodes: []}]}
+                ]
+            }
         ];
     }
 
@@ -113,82 +133,6 @@
     }
 
     // ========== 渲染函数 (使用 imgDelay 新名称) ==========
-    function renderContextmenu() {
-        const api = `<h3>调用方式</h3><pre><code>junkman.contextmenu(elements, items, options?)</code></pre>
-      <h3>参数</h3>
-      <table class="api-table"><tr><th>参数</th><th>类型</th><th>说明</th></tr>
-        <tr><td>elements</td><td>HTMLElement[]</td><td>要绑定的元素</td></tr>
-        <tr><td>items</td><td>ContextMenuItem[]</td><td>菜单项 { title, func? }</td></tr>
-        <tr><td>options.width</td><td>string</td><td>菜单宽度</td></tr></table>`;
-        const demo = `<p>右键下方方块：</p>
-      <div class="flex gap-2"><div class="cm-box w-20 h-12 flex items-center justify-center rounded bg-orange-500 cursor-context-menu">右键1</div>
-      <div class="cm-box w-20 h-12 flex items-center justify-center rounded bg-green-500 cursor-context-menu">右键2</div></div>
-      <button class="btn btn-xs btn-outline mt-2" id="destroyCMBtn">销毁菜单</button>`;
-        return renderSection('📌 contextmenu 右键菜单', '自定义右键菜单，边界检测，可销毁。', api, demo);
-    }
-
-    function renderToast() {
-        const api = `<pre><code>new junkman.Toast(position?: ToastPosition)</code></pre>
-      <h3>ToastPosition 枚举</h3>
-      <table class="api-table"><tr><th>成员</th><th>值</th></tr>
-        <tr><td>TopLeft</td><td>top-left</td></tr><tr><td>TopRight</td><td>top-right</td></tr></table>`;
-        const demo = `<div class="flex flex-wrap gap-2">
-      <button class="btn btn-xs btn-info" onclick="toast.show({message:'信息提示', type:'info'})">信息</button>
-      <button class="btn btn-xs btn-success" onclick="toast.show({message:'操作成功', type:'success'})">成功</button>
-      <button class="btn btn-xs btn-warning" onclick="toast.show({message:'请注意', type:'warning'})">警告</button>
-      <button class="btn btn-xs btn-error" onclick="toast.show({message:'错误发生', type:'error'})">错误</button>
-      <button class="btn btn-xs btn-outline" onclick="centerToast.show({message:'中间通知', type:'info', duration:0})">中间提示</button></div>`;
-        return renderSection('🔔 Toast 消息通知', '基于 DaisyUI Alert，支持九个方位。', api, demo);
-    }
-
-    function renderRequest() {
-        const api = `<pre><code>junkman.request(options: RequestOptions)</code></pre>
-      <h3>RequestOptions 主要属性</h3>
-      <table class="api-table"><tr><th>属性</th><th>类型</th><th>说明</th></tr>
-        <tr><td>url</td><td>string</td><td>请求地址</td></tr>
-        <tr><td>signal</td><td>AbortSignal</td><td>取消信号</td></tr></table>`;
-        const demo = `<button id="reqBtn" class="btn btn-primary btn-sm">发送请求</button>
-      <button id="abortBtn" class="btn btn-error btn-sm hidden">取消</button>
-      <pre id="reqResult" class="bg-base-100 p-2 mt-2 rounded"></pre>`;
-        return renderSection('📡 request 网络请求', '支持取消、超时、进度。', api, demo);
-    }
-
-    function renderImgDelay() {
-        const api = `<pre><code>junkman.ImgDelay(elements, time?, options?)</code></pre>
-      <h3>参数</h3>
-      <table class="api-table"><tr><th>参数</th><th>类型</th><th>说明</th></tr>
-        <tr><td>elements</td><td>HTMLElement[]</td><td>图片元素数组</td></tr>
-        <tr><td>time</td><td>number</td><td>延迟加载间隔</td></tr>
-        <tr><td>options.zoom</td><td>boolean</td><td>悬停放大</td></tr>
-        <tr><td>options.skeleton</td><td>boolean</td><td>是否显示骨架加载动画</td></tr></table>`;
-        const demo = `<div id="imgDelayDemo" class="flex gap-2">
-      <img class="w-16 h-16 object-cover" data-src="https://picsum.photos/200?random=10" />
-      <img class="w-16 h-16 object-cover" data-src="https://picsum.photos/200?random=11" /></div>`;
-        return renderSection('🖼️ ImgDelay 图片加载器', '延迟加载 data-src，带骨架屏，支持放大预览。', api, demo);
-    }
-
-    function renderDOMBuilder() {
-        const api = `<pre><code>junkman.createDOMFromTree(node, parent?)</code></pre>
-      <h3>DOMNode 属性</h3>
-      <table class="api-table"><tr><th>属性</th><th>类型</th><th>说明</th></tr>
-        <tr><td>tag</td><td>string</td><td>标签名</td></tr>
-        <tr><td>className</td><td>string</td><td>css类</td></tr></table>`;
-        const demo = `<div id="domBuilderDemo"></div>`;
-        return renderSection('🏗️ createDOMFromTree', '通过对象树创建 DOM。', api, demo);
-    }
-
-    function renderIcons() {
-        const icons = ['trash','move','write','close','aspect','check','check_circle','caret_right','sub_loading','node'];
-        const demo = `<div class="grid grid-cols-5 gap-2">${icons.map(icon => `<span class="flex items-center gap-1"><span>${junkman.Icon[icon]}</span> ${icon}</span>`).join('')}</div>`;
-        return renderSection('🎨 Icon 图标', '内置 SVG 图标集合。', '', demo);
-    }
-
-    function renderDimensionalTree() {
-        const api = `<pre><code>junkman.dimensionalTree(nodes)</code></pre>`;
-        const demo = `<pre id="dimTreeResult" class="bg-base-100 p-2 rounded"></pre>`;
-        return renderSection('🌲 dimensionalTree 树展平', '用于级联组件的核心工具。', api, demo);
-    }
-
     function renderPaginator() {
         const api = `<pre><code>new junkman.Paginator(container, options)</code></pre>
       <h3>选项</h3>
@@ -279,87 +223,19 @@
         return renderSection('🗂️ SidebarTabs 文档布局', '可折叠多级导航 + 内容切换。', api, demo);
     }
 
-    function renderToggle() {
-        return renderSection('🔘 Toggle 开关', '基于 DaisyUI toggle 样式。', `
-<pre><code>new junkman.Toggle({ container, size?, checked?, onChange? })</code></pre>
-<table class="api-table"><tr><th>属性</th><th>说明</th></tr><tr><td>container</td><td>挂载容器</td></tr><tr><td>size</td><td>尺寸 'sm'|'md'|'lg'</td></tr><tr><td>checked</td><td>初始状态</td></tr><tr><td>onChange</td><td>变化回调</td></tr></table>`,
-            `<div id="toggleDemo" class="flex items-center gap-2"><span id="toggleStatus" class="text-sm">关闭</span></div>`);
-    }
-
-    function renderGlobalEvents() {
-        const api = `<pre><code>new junkman.GlobalEventManager()</code></pre>
-      <p><b>方法：</b> <code>add(target, event, listener)</code>，<code>removeAll()</code></p>`;
-        return renderSection('🛠️ GlobalEventManager', '全局事件管理器。', api, '');
-    }
-
     // ========== 初始化函数 (适配新名称) ==========
-    function initContextmenu() {
-        const boxes = document.querySelectorAll('.cm-box');
-        const destroyFn = junkman.contextmenu(boxes, [
-            { title: '复制', func: () => toast.show({ message: '复制成功', type: 'success' }) },
-            { title: '粘贴', func: () => toast.show({ message: '粘贴成功', type: 'success' }) },
-            { title: '控制台输出', func: () => console.log('右键点击') }
-        ]);
-        document.getElementById('destroyCMBtn')?.addEventListener('click', () => {
-            destroyFn();
-            toast.show({ message: '菜单已销毁', type: 'success' });
-        });
-    }
-
-    function initRequest() {
-        const reqBtn = document.getElementById('reqBtn');
-        const abortBtn = document.getElementById('abortBtn');
-        const result = document.getElementById('reqResult');
-        let controller;
-        reqBtn?.addEventListener('click', async () => {
-            controller = new AbortController();
-            reqBtn.disabled = true; abortBtn.classList.remove('hidden'); result.textContent = '请求中...';
-            try {
-                const data = await junkman.request({ url: 'https://jsonplaceholder.typicode.com/posts/1', signal: controller.signal });
-                result.textContent = JSON.stringify(data, null, 2);
-                toast.show({ message: '请求成功', type: 'success' });
-            } catch (e) { result.textContent = '错误: ' + e.message; }
-            finally { reqBtn.disabled = false; abortBtn.classList.add('hidden'); }
-        });
-        abortBtn?.addEventListener('click', () => controller?.abort());
-    }
-
-    function initImgDelay() {
-        const imgs = document.querySelectorAll('#imgDelayDemo img');
-        junkman.ImgDelay(Array.from(imgs), 100, { zoom: true, width: 250, height: -1, skeleton: true });
-    }
-
-    function initDOMBuilder() {
-        const container = document.getElementById('domBuilderDemo');
-        if (container) {
-            const btn = junkman.createDOMFromTree({
-                tag: 'button', className: 'btn btn-sm btn-primary', textContent: '点击我',
-                events: { click: () => toast.show({ message: '动态按钮被点击', type: 'success' }) }
-            });
-            container.appendChild(btn);
-        }
-    }
-
-    function initDimensionalTree() {
-        const result = document.getElementById('dimTreeResult');
-        if (result) {
-            const flat = junkman.dimensionalTree(getTreeData());
-            result.textContent = JSON.stringify(flat, (key, val) => key === 'originalNode' ? undefined : val, 2);
-        }
-    }
-
     function initPaginator() {
         const container = document.getElementById('paginatorDemo');
         if (container) {
             const total = 58;
             new junkman.Paginator(container, {
                 total, pageSize: 10, currentPage: 1,
-                pageSizeOptions: [5,10,20],
+                pageSizeOptions: [5, 10, 20],
                 onPageChange: (page, size) => {
-                    const start = (page-1)*size+1, end = Math.min(page*size, total);
+                    const start = (page - 1) * size + 1, end = Math.min(page * size, total);
                     document.getElementById('paginatorLog').innerHTML = `📄 第${page}页 每页${size}条 显示${start}-${end}`;
                 },
-                onPageSizeChange: (size) => toast.show({ message: `每页条数变为 ${size}`, type: 'info' })
+                onPageSizeChange: (size) => toast.show({message: `每页条数变为 ${size}`, type: 'info'})
             });
         }
     }
@@ -368,7 +244,7 @@
         const container = document.getElementById('cascadeSelectorDemo');
         new junkman.CascadeSelector(container, getTreeData(), {
             searchable: true, placeholder: "请选择地区", limit: 2,
-            onChange: (sel) => toast.show({ message: `已选: ${sel.map(n=>n.val).join(', ')}`, type: 'success' })
+            onChange: (sel) => toast.show({message: `已选: ${sel.map(n => n.val).join(', ')}`, type: 'success'})
         });
     }
 
@@ -377,8 +253,14 @@
         new junkman.CascadeTree(container, getTreeData(), {
             apiUrl: '/api/dummy', searchable: true, draggable: true,
             onDelete: async (node) => confirm(`删除「${node.val}」？`),
-            onUpdate: async (node, val) => { toast.show({ message: `更新: ${node.val} → ${val}`, type: 'success' }); return true; },
-            onInsert: async (parentKey, newNode) => { toast.show({ message: `新增子节点: ${newNode.val}`, type: 'success' }); return true; }
+            onUpdate: async (node, val) => {
+                toast.show({message: `更新: ${node.val} → ${val}`, type: 'success'});
+                return true;
+            },
+            onInsert: async (parentKey, newNode) => {
+                toast.show({message: `新增子节点: ${newNode.val}`, type: 'success'});
+                return true;
+            }
         });
     }
 
@@ -387,13 +269,15 @@
         if (container) {
             new junkman.Tabs(container, {
                 tabs: [
-                    { label: '静态内容', content: '<div class="p-4">这里是静态标签内容。</div>' },
-                    { label: '远程加载', content: async (signal) => {
+                    {label: '静态内容', content: '<div class="p-4">这里是静态标签内容。</div>'},
+                    {
+                        label: '远程加载', content: async (signal) => {
                             await new Promise(resolve => setTimeout(resolve, 1200));
                             if (signal.aborted) throw new Error('Aborted');
                             return '<div class="p-4 text-success">远程加载的 HTML 片段</div>';
-                        }},
-                    { label: '禁用', content: '不可用', disabled: true }
+                        }
+                    },
+                    {label: '禁用', content: '不可用', disabled: true}
                 ],
                 type: 'lifted',
                 lazy: true
@@ -407,10 +291,20 @@
         new junkman.SidebarTabs({
             container: container,
             items: [
-                { label: '概述', sub: [
-                        { target: 'intro', label: '简介', render: () => '<div class="p-4">SidebarTabs 组件用于创建带左侧导航的文档布局。</div>' },
-                        { target: 'usage', label: '用法', render: () => '<div class="p-4">通过配置 items 数组即可快速生成导航与内容切换。</div>' }
-                    ]}
+                {
+                    label: '概述', sub: [
+                        {
+                            target: 'intro',
+                            label: '简介',
+                            render: () => '<div class="p-4">SidebarTabs 组件用于创建带左侧导航的文档布局。</div>'
+                        },
+                        {
+                            target: 'usage',
+                            label: '用法',
+                            render: () => '<div class="p-4">通过配置 items 数组即可快速生成导航与内容切换。</div>'
+                        }
+                    ]
+                }
             ],
             defaultActive: 'intro'
         });
@@ -419,57 +313,51 @@
     function initSortable() {
         new junkman.Sortable(document.getElementById('sortableList'), {
             direction: 'vertical',
-            onSort: (order) => { console.log('排序结果:', order); toast.show({ message: '排序已更新', type: 'success' }); }
+            onSort: (order) => {
+                console.log('排序结果:', order);
+                toast.show({message: '排序已更新', type: 'success'});
+            }
         });
     }
 
     function initModal() {
         document.getElementById('openSimpleModalBtn')?.addEventListener('click', () => {
-            const modal = new junkman.Modal({ title: '简单模态框', aspect: { width: "400px", height: "auto" }, gauze: true });
+            const modal = new junkman.Modal({title: '简单模态框', aspect: {width: "400px", height: "auto"}, gauze: true});
             modal.setContent('<div class="p-4"><h3>内容区域</h3><p>这是一个简单的模态框</p></div>');
             modal.make();
         });
         document.getElementById('openRemoteModalBtn')?.addEventListener('click', () => {
-            const modal = new junkman.Modal({ title: '远程加载', aspect: { width: "500px", height: "auto" }, gauze: true });
+            const modal = new junkman.Modal({title: '远程加载', aspect: {width: "500px", height: "auto"}, gauze: true});
             modal.setContent('加载中...');
             modal.make();
             setTimeout(() => modal.setLinkContent('<div class="p-4"><h3>动态内容</h3><p>模拟异步加载的 HTML</p></div>'), 1000);
         });
         document.getElementById('openFormModalBtn')?.addEventListener('click', () => {
-            const modal = new junkman.Modal({ title: '表单模态框', aspect: { width: "400px", height: "auto" }, gauze: true });
+            const modal = new junkman.Modal({title: '表单模态框', aspect: {width: "400px", height: "auto"}, gauze: true});
             const form = document.createElement('form');
             form.innerHTML = '<input name="username" class="input input-bordered input-sm w-full mb-2" placeholder="用户名" /><button type="submit" class="btn btn-sm btn-primary">提交</button>';
             modal.setContent(form);
-            modal.bindSubmit(async (formData) => { toast.show({ message: `提交: ${formData.get('username')}`, type: 'success' }); });
+            modal.bindSubmit(async (formData) => {
+                toast.show({message: `提交: ${formData.get('username')}`, type: 'success'});
+            });
             modal.make();
         });
     }
 
     function initFormBuilder() {
         const schema = [
-            { name: 'username', label: '用户名', type: 'text', required: true },
-            { name: 'age', label: '年龄', type: 'number' },
-            { name: 'gender', label: '性别', type: 'select', options: [{key:'m',value:'男'},{key:'f',value:'女'}] }
+            {name: 'username', label: '用户名', type: 'text', required: true},
+            {name: 'age', label: '年龄', type: 'number'},
+            {name: 'gender', label: '性别', type: 'select', options: [{key: 'm', value: '男'}, {key: 'f', value: '女'}]}
         ];
         const form = new junkman.FormBuilder(schema).build();
         document.getElementById('formBuilderDemo')?.appendChild(form);
         document.getElementById('getFormDataBtn')?.addEventListener('click', () => {
             const fd = new FormData(document.querySelector('#formBuilderDemo form'));
-            const data = {}; fd.forEach((v,k)=>data[k]=v);
+            const data = {};
+            fd.forEach((v, k) => data[k] = v);
             document.getElementById('formResult').textContent = JSON.stringify(data, null, 2);
-            toast.show({ message: '已获取表单数据', type: 'success' });
-        });
-    }
-
-    function initToggle() {
-        const status = document.getElementById('toggleStatus');
-        new junkman.Toggle({
-            container: document.getElementById('toggleDemo'),
-            size: 'md',
-            onChange: (checked) => {
-                status.textContent = checked ? '开启' : '关闭';
-                toast.show({ message: `开关: ${checked ? 'ON' : 'OFF'}`, type: 'info' });
-            }
+            toast.show({message: '已获取表单数据', type: 'success'});
         });
     }
 
@@ -480,43 +368,78 @@
             {
                 label: '基础工具',
                 sub: [
-                    { target: 'contextmenu', label: 'contextmenu', render: renderContextmenu, afterRender: initContextmenu },
-                    { target: 'toast', label: 'Toast 通知', render: renderToast },
-                    { target: 'request', label: 'request', render: renderRequest, afterRender: initRequest },
-                    { target: 'imgDelay', label: 'imgDelay', render: renderImgDelay, afterRender: initImgDelay },
-                    { target: 'toggle', label: 'Toggle 开关', render: renderToggle, afterRender: initToggle },
-                    { target: 'dombuilder', label: 'createDOMFromTree', render: renderDOMBuilder, afterRender: initDOMBuilder },
-                    { target: 'icons', label: 'Icon 图标', render: renderIcons },
-                    { target: 'dimensionalTree', label: 'dimensionalTree', render: renderDimensionalTree, afterRender: initDimensionalTree }
+                    {
+                        target: 'contextmenu',
+                        label: 'contextmenu',
+                        render: renderContextmenu,
+                        afterRender: initContextmenuTabs
+                    },
+                    {target: 'toast', label: 'Toast 通知', render: renderToast, afterRender: initToastTabs},
+                    {target: 'imgLoader', label: 'imgLoader', render: renderImgLoader, afterRender: initImgLoaderTabs},
                 ]
             },
             {
                 label: '选择器',
                 sub: [
-                    { target: 'selector', label: 'Selector 下拉菜单', render: renderSelector, afterRender: initSelectorTabs },
-                    { target: 'switcher', label: 'Switcher 开关', render: renderSwitcher, afterRender: initSwitcherTabs }
+                    {target: 'toggle', label: 'Toggle 开关', render: renderToggle, afterRender: initToggleTabs},
+                    {target: 'selector', label: 'Selector 下拉菜单', render: renderSelector, afterRender: initSelectorTabs},
+                    {target: 'switcher', label: 'Switcher 开关', render: renderSwitcher, afterRender: initSwitcherTabs}
                 ]
             },
-            { target: 'paginator', label: 'Paginator 分页器', render: renderPaginator, afterRender: initPaginator },
+            {target: 'paginator', label: 'Paginator 分页器', render: renderPaginator, afterRender: initPaginator},
             {
                 label: '级联组件',
                 sub: [
-                    { target: 'cascadeselector', label: 'CascadeSelector', render: renderCascadeSelector, afterRender: initCascadeSelector },
-                    { target: 'cascadetree', label: 'CascadeTree', render: renderCascadeTree, afterRender: initCascadeTree }
+                    {
+                        target: 'cascadeselector',
+                        label: 'CascadeSelector',
+                        render: renderCascadeSelector,
+                        afterRender: initCascadeSelector
+                    },
+                    {
+                        target: 'cascadetree',
+                        label: 'CascadeTree',
+                        render: renderCascadeTree,
+                        afterRender: initCascadeTree
+                    }
                 ]
             },
-            { target: 'table', label: 'Table', render: renderTable, afterRender: initTable },
+            {target: 'table', label: 'Table', render: renderTable, afterRender: initTable},
             {
                 label: '标签页与导航',
                 sub: [
-                    { target: 'tabs', label: 'Tabs 标签页', render: renderTabs, afterRender: initTabs },
-                    { target: 'sidebartabs', label: 'SidebarTabs', render: renderSidebarTabs, afterRender: initSidebarTabs }
+                    {target: 'tabs', label: 'Tabs 标签页', render: renderTabs, afterRender: initTabs},
+                    {
+                        target: 'sidebartabs',
+                        label: 'SidebarTabs',
+                        render: renderSidebarTabs,
+                        afterRender: initSidebarTabs
+                    }
                 ]
             },
-            { target: 'sortable', label: 'Sortable', render: renderSortable, afterRender: initSortable },
-            { target: 'modal', label: 'Modal', render: renderModal, afterRender: initModal },
-            { target: 'formbuilder', label: 'FormBuilder', render: renderFormBuilder, afterRender: initFormBuilder },
-            { target: 'globalEvents', label: 'GlobalEventManager', render: renderGlobalEvents }
+            {target: 'sortable', label: 'Sortable', render: renderSortable, afterRender: initSortable},
+            {target: 'modal', label: 'Modal', render: renderModal, afterRender: initModal},
+            {target: 'formbuilder', label: 'FormBuilder', render: renderFormBuilder, afterRender: initFormBuilder},
+            {
+                label: '辅助工具',
+                sub: [
+                    {target: 'request', label: 'request', render: renderRequest, afterRender: initRequest},
+                    {
+                        target: 'dombuilder',
+                        label: 'createDOMFromTree',
+                        render: renderDOMBuilder,
+                        afterRender: initDOMBuilder
+                    },
+                    {target: 'icons', label: 'Icon 图标', render: renderIcons},
+                    {
+                        target: 'dimensionalTree',
+                        label: 'dimensionalTree',
+                        render: renderDimensionalTree,
+                        afterRender: initDimensionalTree
+                    },
+                    {target: 'globalEvents', label: 'GlobalEventManager', render: renderGlobalEvents},
+                ]
+            },
         ],
         defaultActive: 'contextmenu'
     });

@@ -1,7 +1,7 @@
 import { Sortable } from '../sortable';
 import { Icon } from '../../aid/icon';
 import { request } from '../../aid/request';
-import { ImgDelay } from '../../aid/imgdelay';
+import { ImgLoader } from '../../aid/imgloader';
 import { Selector } from '../select/selector';
 import { Switcher } from '../select/switcher';
 import { SELECTOR_DIRECTION } from '../select/types';
@@ -73,13 +73,13 @@ export class Table {
     private tableDom!: HTMLTableElement;
     private tbodyDom!: HTMLElement;
     private sortable: Sortable | null = null;
-    private imgDelayQueue: HTMLImageElement[] = [];
-    private imgDelaySettings: any = {};
+    private imgLoaderQueue: HTMLImageElement[] = [];
+    private imgLoaderSettings: any = {};
     private selectedRows: Set<number> = new Set();
     private batchBar: HTMLElement | null = null;
 
     // 资源清理
-    private imgDelayCleanup: (() => void) | null = null;
+    private imgLoaderCleanup: (() => void) | null = null;
     private menuInstances: Selector[] = [];
     private switcherInstances: Switcher[] = [];
     private eventCleanups: (() => void)[] = [];
@@ -489,8 +489,8 @@ export class Table {
                 img.className = 'max-w-full max-h-12 object-contain';
                 if (col.delay) {
                     img.setAttribute('data-src', value);
-                    this.imgDelayQueue.push(img);
-                    if (col.zoomOptions) this.imgDelaySettings = col.zoomOptions;
+                    this.imgLoaderQueue.push(img);
+                    if (col.zoomOptions) this.imgLoaderSettings = col.zoomOptions;
                 } else {
                     img.src = value;
                 }
@@ -554,9 +554,9 @@ export class Table {
     // ======================== 公共方法 ========================
     public refresh() {
         // 清理图片延迟加载
-        if (this.imgDelayCleanup) {
-            this.imgDelayCleanup();
-            this.imgDelayCleanup = null;
+        if (this.imgLoaderCleanup) {
+            this.imgLoaderCleanup();
+            this.imgLoaderCleanup = null;
         }
 
         // 清理 Menu / Switcher
@@ -570,9 +570,9 @@ export class Table {
         this.data.forEach((row, idx) => this.renderRow(row, idx));
 
         // 重新应用图片懒加载
-        if (this.imgDelayQueue.length) {
-            this.imgDelayCleanup = ImgDelay(this.imgDelayQueue, 200, this.imgDelaySettings);
-            this.imgDelayQueue = [];
+        if (this.imgLoaderQueue.length) {
+            this.imgLoaderCleanup = ImgLoader(this.imgLoaderQueue, 200, this.imgLoaderSettings);
+            this.imgLoaderQueue = [];
         }
 
         this.updateBatchBar();
@@ -636,9 +636,9 @@ export class Table {
     public destroy() {
         this.sortable?.destroy();
 
-        if (this.imgDelayCleanup) {
-            this.imgDelayCleanup();
-            this.imgDelayCleanup = null;
+        if (this.imgLoaderCleanup) {
+            this.imgLoaderCleanup();
+            this.imgLoaderCleanup = null;
         }
 
         this.menuInstances.forEach(menu => menu.destroy?.());

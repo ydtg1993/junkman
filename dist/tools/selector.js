@@ -232,3 +232,64 @@ new junkman.Switcher(
 
     initSwitcher();
 }
+
+function renderToggle() {
+    const api = `
+        <pre><code>new junkman.Toggle({ container, size?, checked?, onChange? })</code></pre>
+        <h3>参数</h3>
+        <table class="api-table">
+            <tr><th>属性</th><th>说明</th></tr>
+            <tr><td>container</td><td>挂载容器</td></tr>
+            <tr><td>size</td><td>尺寸 'sm'|'md'|'lg'</td></tr>
+            <tr><td>checked</td><td>初始状态</td></tr>
+            <tr><td>onChange</td><td>变化回调</td></tr>
+        </table>
+    `;
+    const demo = `<div id="toggleTabs" class="mt-4"></div>`;
+    return renderSection('🔘 Toggle 开关', '基于 DaisyUI toggle 样式。', api, demo);
+}
+
+function initToggleTabs() {
+    const container = document.getElementById('toggleTabs');
+    if (!container) return;
+
+    // 效果面板
+    const effectDiv = document.createElement('div');
+    effectDiv.innerHTML = `
+        <div id="toggleDemo" class="flex items-center gap-2">
+            <span id="toggleStatus" class="text-sm">关闭</span>
+        </div>
+    `;
+
+    // 代码面板
+    const codeDiv = document.createElement('div');
+    codeDiv.innerHTML = `<pre><code class="language-javascript">${escapeHTML(`
+const status = document.getElementById('toggleStatus');
+new junkman.Toggle({
+    container: document.getElementById('toggleDemo'),
+    size: 'md',
+    onChange: (checked) => {
+        status.textContent = checked ? '开启' : '关闭';
+        toast.show({ message: \`开关: \${checked ? 'ON' : 'OFF'}\`, type: 'info' });
+    }
+});
+    `.trim())}</code></pre>`;
+
+    new junkman.Tabs(container, {
+        tabs: [
+            { label: '效果', content: effectDiv },
+            { label: '代码', content: codeDiv }
+        ]
+    });
+
+    // DOM 就绪后初始化 Toggle 组件
+    const status = effectDiv.querySelector('#toggleStatus');
+    new junkman.Toggle({
+        container: effectDiv.querySelector('#toggleDemo'),
+        size: 'md',
+        onChange: (checked) => {
+            if (status) status.textContent = checked ? '开启' : '关闭';
+            toast.show({ message: `开关: ${checked ? 'ON' : 'OFF'}`, type: 'info' });
+        }
+    });
+}

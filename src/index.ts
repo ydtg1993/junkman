@@ -30,7 +30,7 @@ export { GlobalEventManager } from './aid/eventmanager';
 // ============================================================
 
 /** 图片延迟加载与悬停预览（imgDelay） */
-export { ImgDelay } from './aid/imgdelay';
+export { ImgLoader } from './aid/imgloader';
 
 // ============================================================
 // 🔔 Toast 消息通知
@@ -148,7 +148,7 @@ export type { SortableOptions } from './utils/sortable/index';
 export type { PaginatorOptions } from './utils/pagination/paginator';
 
 /** 图片延迟加载选项类型 */
-export type { ImgDelayOptions } from './aid/imgdelay';
+export type { ImgLoaderOptions } from './aid/imgloader';
 
 export { Toggle } from './utils/toggle/index';
 export type { ToggleOptions } from './utils/toggle/index';
