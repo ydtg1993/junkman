@@ -92,6 +92,9 @@ export class CascadeSelector {
         const ul = document.createElement('ul');
         ul.className = 'menu menu-xs p-0 bg-base-100 rounded-lg w-full';
 
+        // 获取当前层级展开的父节点
+        const activeParentKey = this.expandedParents[stackLevel];
+
         for (let idx = 0; idx < nodes.length; idx++) {
             const node = nodes[idx];
             const li = document.createElement('li');
@@ -104,6 +107,10 @@ export class CascadeSelector {
             const a = document.createElement('a');
             let aClass = 'flex items-center justify-between py-1.5 px-2 hover:bg-base-200 cursor-pointer rounded';
             if (isSelected) aClass += ' bg-success/10';
+            // 高亮逻辑：如果当前层有活动父节点，且当前节点非活动父节点，则置灰
+            if (activeParentKey !== undefined && String(node.key) !== activeParentKey) {
+                aClass += ' opacity-40';
+            }
             a.className = aClass;
             a.setAttribute('data-key', String(node.key));
             a.setAttribute('data-stack', String(stackLevel));
@@ -136,7 +143,6 @@ export class CascadeSelector {
                 a.appendChild(mark);
             }
 
-            // 右键菜单绑定（仅在有子节点时）
             if (hasChildren) {
                 a.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
@@ -220,7 +226,7 @@ export class CascadeSelector {
             if (parentKey !== undefined) {
                 const nodeData = this.flatData[level]?.find(n => String(n.key) === parentKey);
                 if (nodeData) {
-                    this.applyExpand(level, nodeData);
+                    this.applyExpand(level, nodeData, false);
                 }
             }
         }
@@ -329,12 +335,23 @@ export class CascadeSelector {
         this.applyPathHighlight(currentLevel, parentNode);
     }
 
-    private applyExpand(currentLevel: number, parentNode: FlattenedNode) {
+    private applyExpand(currentLevel: number, parentNode: FlattenedNode, clearHighlight = true) {
         const nextLevel = currentLevel + 1;
         if (nextLevel >= this.stacks.length) return;
         const nextStackDiv = this.stacks[nextLevel];
         if (!nextStackDiv) return;
 
+        // 只在主动展开时清除下级旧的高亮（刷新/重建时不需要）
+        if (clearHighlight) {
+            const allAInNext = nextStackDiv.querySelectorAll('a[data-key]');
+            allAInNext.forEach(a => {
+                if (a.classList.contains('opacity-40')) {
+                    a.classList.remove('opacity-40');
+                }
+            });
+        }
+
+        // 下面的展开/隐藏逻辑保持不变
         const childrenKeys = (parentNode.nodes?.map(n => String(n.key)) || []) as string[];
         const allLi = nextStackDiv.querySelectorAll('li');
         allLi.forEach(li => li.classList.add('hidden'));
@@ -358,30 +375,40 @@ export class CascadeSelector {
         const stackDiv = this.stacks[stackLevel];
         if (!stackDiv) return;
         const allA = stackDiv.querySelectorAll('a[data-key]');
+        const activeKey = String(parentNode.key);
+
         allA.forEach(a => {
             const key = a.getAttribute('data-key')!;
-            if (key === String(parentNode.key)) {
-                a.classList.remove('opacity-40');
+            if (key === activeKey) {
+                // 只移除，避免重复添加
+                if (a.classList.contains('opacity-40')) {
+                    a.classList.remove('opacity-40');
+                }
             } else {
-                a.classList.add('opacity-40');
+                // 只添加，避免重复移除
+                if (!a.classList.contains('opacity-40')) {
+                    a.classList.add('opacity-40');
+                }
             }
         });
     }
 
     private collapseFromLevel(level: number) {
         this.expandedParents.length = level;
+        // 移除当前列及所有更深列的高亮
+        for (let i = level; i < this.stacks.length; i++) {
+            const stackDiv = this.stacks[i];
+            if (stackDiv) {
+                const allA = stackDiv.querySelectorAll('a[data-key]');
+                allA.forEach(a => a.classList.remove('opacity-40'));
+            }
+        }
+        // 隐藏更深层的 li
         for (let i = level + 1; i < this.stacks.length; i++) {
             const stackDiv = this.stacks[i];
             if (stackDiv) {
                 const allLi = stackDiv.querySelectorAll('li');
                 allLi.forEach(li => li.classList.add('hidden'));
-            }
-        }
-        if (level >= 0) {
-            const stackDiv = this.stacks[level];
-            if (stackDiv) {
-                const allA = stackDiv.querySelectorAll('a[data-key]');
-                allA.forEach(a => a.classList.remove('opacity-40'));
             }
         }
         this.updateExpandIcons(level);
@@ -434,7 +461,7 @@ export class CascadeSelector {
             if (parentKey !== undefined) {
                 const nodeData = this.flatData[level]?.find(n => String(n.key) === parentKey);
                 if (nodeData) {
-                    this.applyExpand(level, nodeData);
+                    this.applyExpand(level, nodeData, false);
                 }
             }
         }

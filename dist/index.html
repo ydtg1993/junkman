@@ -100,6 +100,10 @@
     const centerToast = new junkman.Toast(junkman.ToastPosition.MiddleCenter);
     window.toast = toast;
     window.centerToast = centerToast;
+
+    function renderSection(title, desc, apiHTML, demoHTML) {
+        return `<div class="demo-section"><h2>${title}</h2><p class="desc">${desc}</p>${apiHTML}<div class="demo-box">${demoHTML}</div></div>`;
+    }
 </script>
 <script src="tools/basic.js"></script>
 <script src="tools/aid.js"></script>
@@ -110,55 +114,8 @@
 <script src="tools/tabs.js"></script>
 <script src="tools/sidebartabs.js"></script>
 <script src="tools/sortable.js"></script>
+<script src="tools/cascade.js"></script>
 <script>
-    function getTreeData() {
-        return [
-            {
-                key: 1, val: "华北", nodes: [
-                    {
-                        key: 11, val: "北京市", nodes: [
-                            {key: 111, val: "东城区", nodes: []},
-                            {key: 112, val: "西城区", nodes: []},
-                            {key: 113, val: "朝阳区", nodes: [{key: 1131, val: "三里屯街道", nodes: []}]}
-                        ]
-                    },
-                    {key: 12, val: "天津市", nodes: []}
-                ]
-            },
-            {
-                key: 2, val: "华东", nodes: [
-                    {key: 21, val: "上海市", nodes: [{key: 211, val: "黄浦区", nodes: []}]}
-                ]
-            }
-        ];
-    }
-
-    function renderSection(title, desc, apiHTML, demoHTML) {
-        return `<div class="demo-section"><h2>${title}</h2><p class="desc">${desc}</p>${apiHTML}<div class="demo-box">${demoHTML}</div></div>`;
-    }
-
-    function renderCascadeSelector() {
-        const api = `<pre><code>new junkman.CascadeSelector(container, treeData, options)</code></pre>
-      <h3>选项</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>searchable</td><td>是否搜索</td></tr>
-        <tr><td>limit</td><td>最大选择数</td></tr>
-        <tr><td>loadChildren</td><td>懒加载子节点</td></tr></table>`;
-        const demo = `<div id="cascadeSelectorDemo" class="bg-base-100 rounded-lg" style="min-height:250px"></div>`;
-        return renderSection('🌲 CascadeSelector 级联选择器', '多级树形选择，支持搜索、全选子级。', api, demo);
-    }
-
-    function renderCascadeTree() {
-        const api = `<pre><code>new junkman.CascadeTree(container, treeData, options)</code></pre>
-      <h3>选项</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>apiUrl</td><td>后台接口基址</td></tr>
-        <tr><td>draggable</td><td>启用拖拽排序</td></tr>
-        <tr><td>loadChildren</td><td>懒加载</td></tr></table>`;
-        const demo = `<div id="cascadeTreeDemo" class="bg-base-100 rounded-lg" style="min-height:250px"></div>`;
-        return renderSection('🌳 CascadeTree 树形管理器', '右键菜单增删改查、拖拽排序。', api, demo);
-    }
-
     function renderModal() {
         const api = `<pre><code>new junkman.Modal(options)</code></pre>
       <h3>选项</h3>
@@ -169,30 +126,6 @@
       <button id="openRemoteModalBtn" class="btn btn-primary btn-sm">远程内容模态框</button>
       <button id="openFormModalBtn" class="btn btn-accent btn-sm">表单提交模态框</button>`;
         return renderSection('🪟 Modal 模态框', '支持遮罩、远程加载、表单。', api, demo);
-    }
-
-    function initCascadeSelector() {
-        const container = document.getElementById('cascadeSelectorDemo');
-        new junkman.CascadeSelector(container, getTreeData(), {
-            searchable: true, placeholder: "请选择地区", limit: 2,
-            onChange: (sel) => toast.show({message: `已选: ${sel.map(n => n.val).join(', ')}`, type: 'success'})
-        });
-    }
-
-    function initCascadeTree() {
-        const container = document.getElementById('cascadeTreeDemo');
-        new junkman.CascadeTree(container, getTreeData(), {
-            apiUrl: '/api/dummy', searchable: true, draggable: true,
-            onDelete: async (node) => confirm(`删除「${node.val}」？`),
-            onUpdate: async (node, val) => {
-                toast.show({message: `更新: ${node.val} → ${val}`, type: 'success'});
-                return true;
-            },
-            onInsert: async (parentKey, newNode) => {
-                toast.show({message: `新增子节点: ${newNode.val}`, type: 'success'});
-                return true;
-            }
-        });
     }
 
     function initModal() {
@@ -250,25 +183,35 @@
                 sub: [
                     {
                         target: 'cascadeselector',
-                        label: 'CascadeSelector',
+                        label: 'CascadeSelector 选择器',
                         render: renderCascadeSelector,
                         afterRender: initCascadeSelector
                     },
                     {
                         target: 'cascadetree',
-                        label: 'CascadeTree',
+                        label: 'CascadeTree 管理器',
                         render: renderCascadeTree,
                         afterRender: initCascadeTree
                     }
                 ]
             },
             {target: 'table', label: 'Table 表格组件', render: renderTable, afterRender: initTable},
-            {target: 'formbuilder', label: 'FormBuilder 表单构建器', render: renderFormBuilder, afterRender: initFormBuilder},
+            {
+                target: 'formbuilder',
+                label: 'FormBuilder 表单构建器',
+                render: renderFormBuilder,
+                afterRender: initFormBuilder
+            },
             {
                 label: '标签页与导航',
                 sub: [
                     {target: 'tabs', label: 'Tabs 标签页', render: renderTabs, afterRender: initTabs},
-                    {target: 'sidebartabs',label: 'SidebarTabs 导航分页器',render: renderSidebarTabs,afterRender: initSidebarTabs}
+                    {
+                        target: 'sidebartabs',
+                        label: 'SidebarTabs 导航分页器',
+                        render: renderSidebarTabs,
+                        afterRender: initSidebarTabs
+                    }
                 ]
             },
             {target: 'sortable', label: 'Sortable 拖拽排序', render: renderSortable, afterRender: initSortable},
@@ -290,7 +233,12 @@
                         render: renderDimensionalTree,
                         afterRender: initDimensionalTree
                     },
-                    {target: 'globalEvents', label: 'GlobalEventManager', render: renderGlobalEvents},
+                    {
+                        target: 'globalEvents',
+                        label: 'GlobalEventManager',
+                        render: renderGlobalEvents,
+                        afterRender: initGlobalEvents
+                    },
                 ]
             },
         ],

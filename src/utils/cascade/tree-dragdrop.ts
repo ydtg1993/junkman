@@ -24,9 +24,10 @@ export class TreeDragDrop {
     }
 
     private onDragStart = (e: DragEvent) => {
-        const target = (e.target as HTMLElement).closest('[data-node-key]') as HTMLElement;
+        // 改用 [data-key] 选择器
+        const target = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
         if (!target) return;
-        const key = target.getAttribute('data-node-key')!;
+        const key = target.getAttribute('data-key')!;   // 读取 data-key
         const node = this.findNode(key);
         if (!node) return;
         this.dragNode = node;
@@ -43,7 +44,7 @@ export class TreeDragDrop {
     private onDragOver = (e: DragEvent) => {
         e.preventDefault();
         if (!this.dragNode) return;
-        const target = (e.target as HTMLElement).closest('[data-node-key]') as HTMLElement;
+        const target = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
         if (!target) return;
         const rect = target.getBoundingClientRect();
         const yRatio = (e.clientY - rect.top) / rect.height;
@@ -57,9 +58,9 @@ export class TreeDragDrop {
     private onDrop = (e: DragEvent) => {
         e.preventDefault();
         if (!this.dragNode) return;
-        const target = (e.target as HTMLElement).closest('[data-node-key]') as HTMLElement;
+        const target = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
         if (!target) return;
-        const targetKey = target.getAttribute('data-node-key')!;
+        const targetKey = target.getAttribute('data-key')!;
         const targetNode = this.findNode(targetKey);
         const position = (target as any).__dropPosition || 'inside';
         this.clearIndicators();
@@ -82,7 +83,7 @@ export class TreeDragDrop {
     }
 
     private clearIndicators() {
-        document.querySelectorAll('[data-node-key].opacity-50').forEach(el => el.classList.remove('opacity-50'));
+        document.querySelectorAll('[data-key].opacity-50').forEach(el => el.classList.remove('opacity-50'));
         if (this.ghost) {
             this.ghost.remove();
             this.ghost = null;
