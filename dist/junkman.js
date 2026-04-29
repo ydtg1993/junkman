@@ -2265,6 +2265,8 @@ var junkman = (function (exports) {
                 if (!this.dragNode)
                     return;
                 const target = e.target.closest('[data-key]');
+                // 清除上一次的高亮（DaisyUI 类）
+                this.clearHighlights();
                 if (!target)
                     return;
                 const rect = target.getBoundingClientRect();
@@ -2276,6 +2278,8 @@ var junkman = (function (exports) {
                     position = 'after';
                 e.dataTransfer.dropEffect = 'move';
                 target.__dropPosition = position;
+                // 直接用 DaisyUI 工具类实现高亮
+                target.classList.add('bg-primary/20', 'outline', 'outline-primary', 'outline-2', 'outline-offset-[-2px]');
             };
             this.onDrop = (e) => {
                 e.preventDefault();
@@ -2299,6 +2303,12 @@ var junkman = (function (exports) {
             container.addEventListener('dragstart', this.onDragStart);
             container.addEventListener('dragover', this.onDragOver);
             container.addEventListener('drop', this.onDrop);
+        }
+        clearHighlights() {
+            const highlighted = document.querySelectorAll('[data-key].bg-primary\\/20');
+            highlighted.forEach(el => {
+                el.classList.remove('bg-primary/20', 'outline', 'outline-primary', 'outline-2', 'outline-offset-[-2px]');
+            });
         }
         findNode(key) {
             const search = (nodes) => {
@@ -2355,7 +2365,6 @@ var junkman = (function (exports) {
                 onUpdate: options.onUpdate,
                 onDelete: options.onDelete,
                 onMigrate: options.onMigrate,
-                onExchange: options.onExchange,
             };
             this.uniqueId = generateUniqueString(6);
             this.init();
@@ -2417,6 +2426,8 @@ var junkman = (function (exports) {
                 return;
             const ul = document.createElement('ul');
             ul.className = 'menu menu-xs p-0 bg-base-100 rounded-lg w-full';
+            // 获取当前层级展开的父节点
+            const activeParentKey = this.expandedParents[stackLevel];
             for (let idx = 0; idx < nodes.length; idx++) {
                 const node = nodes[idx];
                 const li = document.createElement('li');
@@ -2424,11 +2435,17 @@ var junkman = (function (exports) {
                     li.classList.add('hidden');
                 const hasChildren = (node.nodes && node.nodes.length > 0) || !!this.options.loadChildren;
                 const a = document.createElement('a');
-                a.className = 'flex items-center justify-between py-1.5 px-2 hover:bg-base-200 cursor-pointer rounded';
+                let aClass = 'flex items-center justify-between py-1.5 px-2 hover:bg-base-200 cursor-pointer rounded';
+                // 高亮逻辑：如果当前层有活动父节点，且当前节点非活动父节点，则置灰
+                if (activeParentKey !== undefined && String(node.key) !== activeParentKey) {
+                    aClass += ' opacity-40';
+                }
+                a.className = aClass;
                 a.setAttribute('data-key', String(node.key));
                 a.setAttribute('data-stack', String(stackLevel));
                 a.setAttribute('data-index', String(idx));
                 a.setAttribute('data-has-children', hasChildren ? 'true' : 'false');
+                a.setAttribute('draggable', 'true');
                 const left = document.createElement('span');
                 left.className = 'flex items-center gap-1';
                 if (hasChildren) {
@@ -2456,7 +2473,6 @@ var junkman = (function (exports) {
                     if (node.parentNodes.length > 0) {
                         menuItems.push({ title: '迁移到根', func: () => this.migrateToRoot(node) });
                     }
-                    menuItems.push({ title: '交换节点', func: () => this.exchangeNode(node) });
                     this.showContextMenu(a, menuItems, e);
                 });
                 li.appendChild(a);
@@ -2505,7 +2521,7 @@ var junkman = (function (exports) {
                 if (parentKey !== undefined) {
                     const nodeData = (_a = this.flatData[level]) === null || _a === void 0 ? void 0 : _a.find(n => String(n.key) === parentKey);
                     if (nodeData) {
-                        this.applyExpand(level, nodeData);
+                        this.applyExpand(level, nodeData, false);
                     }
                 }
             }
@@ -2551,7 +2567,7 @@ var junkman = (function (exports) {
             const a = stackDiv.querySelector(`a[data-key="${String(key)}"]`);
             return a ? a.querySelector('.expand-icon') : null;
         }
-        applyExpand(currentLevel, parentNode) {
+        applyExpand(currentLevel, parentNode, clearHighlight = true) {
             var _a;
             const nextLevel = currentLevel + 1;
             if (nextLevel >= this.stacks.length)
@@ -2559,6 +2575,16 @@ var junkman = (function (exports) {
             const nextStackDiv = this.stacks[nextLevel];
             if (!nextStackDiv)
                 return;
+            // 只在主动展开时清除下级旧的高亮（刷新/重建时不需要）
+            if (clearHighlight) {
+                const allAInNext = nextStackDiv.querySelectorAll('a[data-key]');
+                allAInNext.forEach(a => {
+                    if (a.classList.contains('opacity-40')) {
+                        a.classList.remove('opacity-40');
+                    }
+                });
+            }
+            // ... 其余展开逻辑不变 ...
             const childrenKeys = (((_a = parentNode.nodes) === null || _a === void 0 ? void 0 : _a.map(n => String(n.key))) || []);
             const allLi = nextStackDiv.querySelectorAll('li');
             allLi.forEach(li => li.classList.add('hidden'));
@@ -2580,30 +2606,37 @@ var junkman = (function (exports) {
             if (!stackDiv)
                 return;
             const allA = stackDiv.querySelectorAll('a[data-key]');
+            const activeKey = String(parentNode.key);
             allA.forEach(a => {
                 const key = a.getAttribute('data-key');
-                if (key === String(parentNode.key)) {
-                    a.classList.remove('opacity-40');
+                if (key === activeKey) {
+                    if (a.classList.contains('opacity-40')) {
+                        a.classList.remove('opacity-40');
+                    }
                 }
                 else {
-                    a.classList.add('opacity-40');
+                    if (!a.classList.contains('opacity-40')) {
+                        a.classList.add('opacity-40');
+                    }
                 }
             });
         }
         collapseFromLevel(level) {
             this.expandedParents.length = level;
+            // 移除当前列及所有更深列的高亮
+            for (let i = level; i < this.stacks.length; i++) {
+                const stackDiv = this.stacks[i];
+                if (stackDiv) {
+                    const allA = stackDiv.querySelectorAll('a[data-key]');
+                    allA.forEach(a => a.classList.remove('opacity-40'));
+                }
+            }
+            // 隐藏更深层的 li
             for (let i = level + 1; i < this.stacks.length; i++) {
                 const stackDiv = this.stacks[i];
                 if (stackDiv) {
                     const allLi = stackDiv.querySelectorAll('li');
                     allLi.forEach(li => li.classList.add('hidden'));
-                }
-            }
-            if (level >= 0) {
-                const stackDiv = this.stacks[level];
-                if (stackDiv) {
-                    const allA = stackDiv.querySelectorAll('a[data-key]');
-                    allA.forEach(a => a.classList.remove('opacity-40'));
                 }
             }
             this.updateExpandIcons(level);
@@ -2657,7 +2690,7 @@ var junkman = (function (exports) {
                 if (parentKey !== undefined) {
                     const nodeData = (_a = this.flatData[level]) === null || _a === void 0 ? void 0 : _a.find(n => String(n.key) === parentKey);
                     if (nodeData) {
-                        this.applyExpand(level, nodeData);
+                        this.applyExpand(level, nodeData, false);
                     }
                 }
             }
@@ -2842,67 +2875,6 @@ var junkman = (function (exports) {
         <button type="submit" class="btn btn-sm btn-warning mt-2">确认迁移</button>
       `;
             }
-            else if (type === 'exchange') {
-                form.className = 'flex flex-col gap-2';
-                const hiddenInput = document.createElement('input');
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = 'targetKey';
-                form.appendChild(hiddenInput);
-                const container = document.createElement('div');
-                container.className = 'flex flex-col gap-1 relative';
-                const label = document.createElement('label');
-                label.className = 'text-sm';
-                label.textContent = '目标节点';
-                container.appendChild(label);
-                const searchInput = document.createElement('input');
-                searchInput.type = 'text';
-                searchInput.className = 'input input-bordered input-sm w-full';
-                searchInput.placeholder = '输入名称搜索...';
-                container.appendChild(searchInput);
-                const dropdown = document.createElement('div');
-                dropdown.className = 'hidden absolute top-full left-0 right-0 z-50 bg-base-100 border rounded shadow-lg max-h-40 overflow-y-auto mt-1';
-                container.appendChild(dropdown);
-                form.appendChild(container);
-                if (node) {
-                    const allNodes = this.getAllNodes(this.data).filter(n => n.key != node.key);
-                    searchInput.addEventListener('input', () => {
-                        const keyword = searchInput.value.trim().toLowerCase();
-                        dropdown.innerHTML = '';
-                        if (!keyword) {
-                            dropdown.classList.add('hidden');
-                            return;
-                        }
-                        const matched = allNodes.filter(n => n.val.toLowerCase().includes(keyword));
-                        if (matched.length === 0) {
-                            dropdown.classList.add('hidden');
-                            return;
-                        }
-                        matched.forEach(m => {
-                            const item = document.createElement('div');
-                            item.className = 'px-2 py-1 hover:bg-base-200 cursor-pointer text-sm';
-                            item.textContent = m.val;
-                            item.addEventListener('click', () => {
-                                searchInput.value = m.val;
-                                hiddenInput.value = String(m.key);
-                                dropdown.classList.add('hidden');
-                            });
-                            dropdown.appendChild(item);
-                        });
-                        dropdown.classList.remove('hidden');
-                    });
-                    // 使用全局事件管理器，避免泄漏（destroy 时会统一移除）
-                    this.globalEvents.add(document, 'click', (e) => {
-                        if (!container.contains(e.target)) {
-                            dropdown.classList.add('hidden');
-                        }
-                    });
-                }
-                const submitBtn = document.createElement('button');
-                submitBtn.type = 'submit';
-                submitBtn.className = 'btn btn-sm btn-secondary mt-2';
-                submitBtn.textContent = '确认交换';
-                form.appendChild(submitBtn);
-            }
             return form;
         }
         getAllNodes(nodes) {
@@ -3017,38 +2989,6 @@ var junkman = (function (exports) {
                         url: `${this.options.apiUrl}/migrate`,
                         method: 'POST',
                         data: { node_key: node.key, target_key: targetKey }
-                    });
-                    success = true;
-                }
-                catch (e) {
-                    console.error(e);
-                }
-            }
-            if (success)
-                await this.refreshData();
-        }
-        async exchangeNode(flatNode) {
-            const node = flatNode.originalNode;
-            const form = this.getFormContent(node, 'exchange');
-            const result = await this.showModal(form, '交换节点');
-            if (!result || !result.targetKey)
-                return;
-            let success = false;
-            if (this.callbacks.onExchange) {
-                const targetNode = this.findNodeByKey(result.targetKey);
-                if (targetNode) {
-                    success = !!(await this.callbacks.onExchange(node, targetNode));
-                }
-                else {
-                    console.warn('目标节点未找到');
-                }
-            }
-            else {
-                try {
-                    await request({
-                        url: `${this.options.apiUrl}/exchange`,
-                        method: 'POST',
-                        data: { node_key: node.key, target_key: result.targetKey }
                     });
                     success = true;
                 }

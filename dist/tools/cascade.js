@@ -136,7 +136,7 @@ function renderCascadeTree() {
             <tr><td>onDragEnd</td><td>(dragged, target, position) => Promise&lt;boolean&gt;</td><td>—</td><td>拖拽结束回调，返回 true 自动刷新树</td></tr>
             <tr><td>formRenderer</td><td>(node, type, context?) => HTMLElement</td><td>—</td><td>自定义模态框表单</td></tr>
             <tr><td>apiUrl</td><td>string</td><td>—</td><td>后端 API 根地址</td></tr>
-            <tr><td>onInsert / onUpdate / onDelete / onMigrate / onExchange</td><td>函数</td><td>—</td><td>CRUD 回调（返回 true 表示成功）</td></tr>
+            <tr><td>onInsert / onUpdate / onDelete / onMigrate</td><td>函数</td><td>—</td><td>CRUD 回调（返回 true 表示成功）</td></tr>
             <tr><td>loadChildren</td><td>(node) => Promise&lt;TreeNode[]&gt;</td><td>—</td><td>异步加载子节点</td></tr>
         </table>
 

@@ -45,7 +45,10 @@ export class TreeDragDrop {
         e.preventDefault();
         if (!this.dragNode) return;
         const target = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
+        // 清除上一次的高亮（DaisyUI 类）
+        this.clearHighlights();
         if (!target) return;
+
         const rect = target.getBoundingClientRect();
         const yRatio = (e.clientY - rect.top) / rect.height;
         let position: 'before' | 'after' | 'inside' = 'inside';
@@ -53,6 +56,15 @@ export class TreeDragDrop {
         else if (yRatio > 0.75) position = 'after';
         e.dataTransfer!.dropEffect = 'move';
         (target as any).__dropPosition = position;
+
+        // 直接用 DaisyUI 工具类实现高亮
+        target.classList.add(
+            'bg-primary/20',
+            'outline',
+            'outline-primary',
+            'outline-2',
+            'outline-offset-[-2px]'
+        );
     };
 
     private onDrop = (e: DragEvent) => {
@@ -67,6 +79,19 @@ export class TreeDragDrop {
         this.options.onDragEnd(this.dragNode, targetNode, position);
         this.dragNode = null;
     };
+
+    private clearHighlights() {
+        const highlighted = document.querySelectorAll('[data-key].bg-primary\\/20');
+        highlighted.forEach(el => {
+            el.classList.remove(
+                'bg-primary/20',
+                'outline',
+                'outline-primary',
+                'outline-2',
+                'outline-offset-[-2px]'
+            );
+        });
+    }
 
     private findNode(key: string): TreeNode | null {
         const search = (nodes: TreeNode[]): TreeNode | null => {
