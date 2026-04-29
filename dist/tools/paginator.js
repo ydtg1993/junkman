@@ -126,7 +126,7 @@ function renderPaginator() {
 }
 
 
-function initPaginatorTabs() {
+function initPaginator() {
     const container = document.getElementById('paginatorTabs');
     if (!container) return;
 

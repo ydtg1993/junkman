@@ -84,7 +84,7 @@ function renderTable() {
     return renderSection('📊 Table 表格', '支持丰富列类型、排序、批量操作、图片懒加载的表格组件。', api, demo);
 }
 
-function initTableTabs() {
+function initTable() {
     const container = document.getElementById('tableTabs');
     if (!container) return;
 

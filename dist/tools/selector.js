@@ -111,7 +111,7 @@ function initSwitcher() {
 }
 
 // ==================== Tab 构建 + 自动调用业务 ====================
-function initSelectorTabs() {
+function initSelector() {
     const container = document.getElementById('selectorTabs');
     if (!container) return;
 
@@ -179,7 +179,7 @@ new junkman.Selector(
     initSelector();
 }
 
-function initSwitcherTabs() {
+function initSwitcher() {
     const container = document.getElementById('switcherTabs');
     if (!container) return;
 
@@ -240,28 +240,77 @@ new junkman.Switcher(
 
 function renderToggle() {
     const api = `
-        <pre><code>new junkman.Toggle({ container, size?, checked?, onChange? })</code></pre>
-        <h3>参数</h3>
+        <h3>构造函数</h3>
+        <pre><code>new junkman.Toggle(options)</code></pre>
+
         <table class="api-table">
-            <tr><th>属性</th><th>说明</th></tr>
-            <tr><td>container</td><td>挂载容器[容器dom, #id查询, .class查询]</td></tr>
-            <tr><td>size</td><td>尺寸 'sm'|'md'|'lg'</td></tr>
-            <tr><td>checked</td><td>初始状态</td></tr>
-            <tr><td>onChange</td><td>变化回调</td></tr>
+            <tr><th>参数</th><th>类型</th><th>必填</th><th>默认值</th><th>说明</th></tr>
+            <tr>
+                <td>container</td>
+                <td>string | HTMLElement</td>
+                <td>是</td>
+                <td>—</td>
+                <td>开关挂载的容器（选择器或 DOM 元素）</td>
+            </tr>
+            <tr>
+                <td>checked</td>
+                <td>boolean</td>
+                <td>否</td>
+                <td>false</td>
+                <td>初始选中状态</td>
+            </tr>
+            <tr>
+                <td>size</td>
+                <td>'sm' | 'md' | 'lg'</td>
+                <td>否</td>
+                <td>'md'</td>
+                <td>开关尺寸</td>
+            </tr>
+            <tr>
+                <td>disabled</td>
+                <td>boolean</td>
+                <td>否</td>
+                <td>false</td>
+                <td>是否禁用</td>
+            </tr>
+            <tr>
+                <td>onChange</td>
+                <td>(checked: boolean) => void</td>
+                <td>否</td>
+                <td>—</td>
+                <td>状态变化回调</td>
+            </tr>
         </table>
+
+        <h3 class="mt-4">实例方法</h3>
+        <table class="api-table">
+            <tr><th>方法</th><th>说明</th></tr>
+            <tr><td>getValue()</td><td>获取当前开关状态（true/false）</td></tr>
+            <tr><td>setValue(value)</td><td>设置开关状态，并触发 change 事件</td></tr>
+            <tr><td>setDisabled(disabled)</td><td>设置禁用状态</td></tr>
+            <tr><td>destroy()</td><td>销毁开关，移除 DOM</td></tr>
+        </table>
+
+        <h3 class="mt-4">行为说明</h3>
+        <ul class="list-disc ml-6 text-sm">
+            <li>基于 DaisyUI <code>toggle</code> 样式。</li>
+            <li>调用 <code>setValue</code> 时会自动触发 <code>onChange</code> 回调。</li>
+            <li>通过 <code>size</code> 属性控制视觉大小。</li>
+        </ul>
     `;
     const demo = `<div id="toggleTabs" class="mt-4"></div>`;
-    return renderSection('🔘 Toggle 开关', '基于 DaisyUI toggle 样式。', api, demo);
+    return renderSection('🔘 Toggle 开关', '基于 DaisyUI 的单选开关，支持多种尺寸和禁用状态。', api, demo);
 }
 
-function initToggleTabs() {
+function initToggle() {
     const container = document.getElementById('toggleTabs');
     if (!container) return;
 
-    // 效果面板
+    // 效果面板：开关 + 状态文字
     const effectDiv = document.createElement('div');
     effectDiv.innerHTML = `
-        <div id="toggleDemo" class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+            <div id="toggleDemo"></div>
             <span id="toggleStatus" class="text-sm">关闭</span>
         </div>
     `;
@@ -271,7 +320,7 @@ function initToggleTabs() {
     codeDiv.innerHTML = `<pre><code class="language-javascript">${escapeHTML(`
 const status = document.getElementById('toggleStatus');
 new junkman.Toggle({
-    container: document.getElementById('toggleDemo'),
+    container: '#toggleDemo',
     size: 'md',
     onChange: (checked) => {
         status.textContent = checked ? '开启' : '关闭';
@@ -287,14 +336,16 @@ new junkman.Toggle({
         ]
     });
 
-    // DOM 就绪后初始化 Toggle 组件
-    const status = effectDiv.querySelector('#toggleStatus');
+    // 初始化 Toggle（捕获状态元素）
+    const statusEl = effectDiv.querySelector('#toggleStatus');
     new junkman.Toggle({
-        container: effectDiv.querySelector('#toggleDemo'),
+        container: '#toggleDemo',
         size: 'md',
         onChange: (checked) => {
-            if (status) status.textContent = checked ? '开启' : '关闭';
-            toast.show({ message: `开关: ${checked ? 'ON' : 'OFF'}`, type: 'info' });
+            if (statusEl) statusEl.textContent = checked ? '开启' : '关闭';
+            if (typeof toast !== 'undefined') {
+                toast.show({ message: `开关: ${checked ? 'ON' : 'OFF'}`, type: 'info' });
+            }
         }
     });
 }

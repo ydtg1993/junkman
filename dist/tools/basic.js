@@ -64,7 +64,7 @@ function renderContextmenu() {
     return renderSection('📌 contextmenu 右键菜单', '自定义右键菜单，边界检测，可销毁。', api, demo);
 }
 
-function initContextmenuTabs() {
+function initContextmenu() {
     const container = document.getElementById('contextmenuTabs');
     if (!container) return;
 
@@ -172,7 +172,7 @@ function renderToast() {
     return renderSection('🔔 Toast 消息通知', '基于 DaisyUI Alert，支持九个方位，动画进出。', api, demo);
 }
 
-function initToastTabs() {
+function initToast() {
     const container = document.getElementById('toastTabs');
     if (!container) return;
 
@@ -302,7 +302,7 @@ function renderImgLoader() {
     return renderSection('🖼️ ImgLoader 图片加载器', '延迟加载 data-src，带骨架屏，支持放大预览。', api, demo);
 }
 
-function initImgLoaderTabs() {
+function initImgLoader() {
     const container = document.getElementById('imgLoaderTabs');
     if (!container) return;
 

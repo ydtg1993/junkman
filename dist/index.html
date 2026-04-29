@@ -106,6 +106,8 @@
 <script src="tools/paginator.js"></script>
 <script src="tools/table.js"></script>
 <script src="tools/selector.js"></script>
+<script src="tools/tabs.js"></script>
+<script src="tools/sidebartabs.js"></script>
 <script>
     function getTreeData() {
         return [
@@ -190,28 +192,6 @@
         return renderSection('📝 FormBuilder 表单构建器', '通过 schema 快速生成表单。', api, demo);
     }
 
-    function renderTabs() {
-        const api = `<pre><code>new junkman.Tabs(container, options)</code></pre>
-      <h3>选项</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>tabs</td><td>标签项数组</td></tr>
-        <tr><td>type</td><td>样式 boxed/lifted/bordered</td></tr>
-        <tr><td>lazy</td><td>静态内容懒加载</td></tr></table>`;
-        const demo = `<div id="tabsDemo" class="mb-4"></div><p class="text-xs text-gray-400">标签1：静态内容 | 标签2：模拟远程加载 | 标签3：禁用</p>`;
-        return renderSection('📑 Tabs 标签页', '支持静态/异步内容、懒加载。', api, demo);
-    }
-
-    function renderSidebarTabs() {
-        const api = `<pre><code>new junkman.SidebarTabs(options)</code></pre>
-      <h3>选项</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>container</td><td>挂载容器</td></tr>
-        <tr><td>items</td><td>嵌套导航项数组（支持 sub）</td></tr>
-        <tr><td>defaultActive</td><td>默认激活 target</td></tr></table>`;
-        const demo = `<div id="sidebarTabsDemo" class="border border-base-300 rounded-lg overflow-hidden" style="height:300px"></div>`;
-        return renderSection('🗂️ SidebarTabs 文档布局', '可折叠多级导航 + 内容切换。', api, demo);
-    }
-
     function initCascadeSelector() {
         const container = document.getElementById('cascadeSelectorDemo');
         new junkman.CascadeSelector(container, getTreeData(), {
@@ -233,52 +213,6 @@
                 toast.show({message: `新增子节点: ${newNode.val}`, type: 'success'});
                 return true;
             }
-        });
-    }
-
-    function initTabs() {
-        const container = document.getElementById('tabsDemo');
-        if (container) {
-            new junkman.Tabs(container, {
-                tabs: [
-                    {label: '静态内容', content: '<div class="p-4">这里是静态标签内容。</div>'},
-                    {
-                        label: '远程加载', content: async (signal) => {
-                            await new Promise(resolve => setTimeout(resolve, 1200));
-                            if (signal.aborted) throw new Error('Aborted');
-                            return '<div class="p-4 text-success">远程加载的 HTML 片段</div>';
-                        }
-                    },
-                    {label: '禁用', content: '不可用', disabled: true}
-                ],
-                type: 'lifted',
-                lazy: true
-            });
-        }
-    }
-
-    function initSidebarTabs() {
-        const container = document.getElementById('sidebarTabsDemo');
-        if (!container) return;
-        new junkman.SidebarTabs({
-            container: container,
-            items: [
-                {
-                    label: '概述', sub: [
-                        {
-                            target: 'intro',
-                            label: '简介',
-                            render: () => '<div class="p-4">SidebarTabs 组件用于创建带左侧导航的文档布局。</div>'
-                        },
-                        {
-                            target: 'usage',
-                            label: '用法',
-                            render: () => '<div class="p-4">通过配置 items 数组即可快速生成导航与内容切换。</div>'
-                        }
-                    ]
-                }
-            ],
-            defaultActive: 'intro'
         });
     }
 
@@ -344,21 +278,21 @@
                         target: 'contextmenu',
                         label: 'contextmenu',
                         render: renderContextmenu,
-                        afterRender: initContextmenuTabs
+                        afterRender: initContextmenu
                     },
-                    {target: 'toast', label: 'Toast 通知', render: renderToast, afterRender: initToastTabs},
-                    {target: 'imgLoader', label: 'imgLoader', render: renderImgLoader, afterRender: initImgLoaderTabs},
+                    {target: 'toast', label: 'Toast 通知', render: renderToast, afterRender: initToast},
+                    {target: 'imgLoader', label: 'imgLoader', render: renderImgLoader, afterRender: initImgLoader},
                 ]
             },
             {
                 label: '选择器',
                 sub: [
-                    {target: 'toggle', label: 'Toggle 开关', render: renderToggle, afterRender: initToggleTabs},
-                    {target: 'selector', label: 'Selector 下拉菜单', render: renderSelector, afterRender: initSelectorTabs},
-                    {target: 'switcher', label: 'Switcher 开关', render: renderSwitcher, afterRender: initSwitcherTabs}
+                    {target: 'toggle', label: 'Toggle 开关', render: renderToggle, afterRender: initToggle},
+                    {target: 'selector', label: 'Selector 下拉菜单', render: renderSelector, afterRender: initSelector},
+                    {target: 'switcher', label: 'Switcher 开关', render: renderSwitcher, afterRender: initSwitcher}
                 ]
             },
-            {target: 'paginator', label: 'Paginator 分页器', render: renderPaginator, afterRender: initPaginatorTabs},
+            {target: 'paginator', label: 'Paginator 分页器', render: renderPaginator, afterRender: initPaginator},
             {
                 label: '级联组件',
                 sub: [
@@ -376,17 +310,12 @@
                     }
                 ]
             },
-            {target: 'table', label: 'Table', render: renderTable, afterRender: initTableTabs},
+            {target: 'table', label: 'Table 表格组件', render: renderTable, afterRender: initTable},
             {
                 label: '标签页与导航',
                 sub: [
                     {target: 'tabs', label: 'Tabs 标签页', render: renderTabs, afterRender: initTabs},
-                    {
-                        target: 'sidebartabs',
-                        label: 'SidebarTabs',
-                        render: renderSidebarTabs,
-                        afterRender: initSidebarTabs
-                    }
+                    {target: 'sidebartabs',label: 'SidebarTabs 导航分页器',render: renderSidebarTabs,afterRender: initSidebarTabs}
                 ]
             },
             {target: 'sortable', label: 'Sortable', render: renderSortable, afterRender: initSortable},
