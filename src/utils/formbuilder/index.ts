@@ -1,6 +1,21 @@
-import { FormFieldSchema } from './types';
+import { FormFieldSchema, WidgetInstance } from './types';
 
 export class FormBuilder {
+    // 组件注册表
+    private static widgets = new Map<string, (container: HTMLElement, field: FormFieldSchema, onChange: (value: any) => void) => WidgetInstance>();
+
+    /**
+     * 注册一个自定义组件
+     * @param name 组件名称（schema 中 widgetName 对应的值）
+     * @param factory 组件工厂函数。接收容器、字段配置、值变化回调，需返回一个包含 setValue/getValue/destroy 的对象
+     */
+    public static registerWidget(
+        name: string,
+        factory: (container: HTMLElement, field: FormFieldSchema, onChange: (value: any) => void) => WidgetInstance
+    ) {
+        FormBuilder.widgets.set(name, factory);
+    }
+
     constructor(private schema: FormFieldSchema[]) {}
 
     public build(): HTMLElement {
@@ -25,6 +40,38 @@ export class FormBuilder {
         label.textContent = field.label;
         wrapper.appendChild(label);
 
+        // ----- 自定义组件处理 -----
+        if (field.type === 'widget' && field.widgetName && FormBuilder.widgets.has(field.widgetName)) {
+            const factory = FormBuilder.widgets.get(field.widgetName)!;
+            const container = document.createElement('div');
+            // 创建隐藏 input，用于表单提交
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = field.name;
+            if (field.defaultValue !== undefined) {
+                hiddenInput.value = String(field.defaultValue);
+            }
+            if (field.required) hiddenInput.required = true;
+            wrapper.appendChild(hiddenInput);
+
+            // 调用工厂函数
+            const instance = factory(container, field, (newValue) => {
+                hiddenInput.value = String(newValue);
+                // 触发原生 change 事件，方便外部监听
+                hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            // 初始化默认值
+            if (field.defaultValue !== undefined && instance.setValue) {
+                instance.setValue(field.defaultValue);
+            }
+
+            wrapper.appendChild(container);
+            // 存储实例以便销毁（可选，这里不强制清理，由外部管理）
+            return wrapper;
+        }
+
+        // ----- 原生控件处理（保持不变） -----
         let input: HTMLElement;
         switch (field.type) {
             case 'text':
@@ -43,12 +90,11 @@ export class FormBuilder {
                 if (field.defaultValue) input.textContent = field.defaultValue;
                 break;
             case 'select': {
-                // ---------- 隐藏的原生 <select>（用于表单验证与值收集）----------
+                // ...原有 select 实现（保持原样）...
                 const hiddenSelect = document.createElement('select');
                 hiddenSelect.className = 'absolute w-0 h-0 opacity-0 -z-10';
                 if (field.name) hiddenSelect.name = field.name;
                 if (field.required) hiddenSelect.required = true;
-
                 if (field.placeholder) {
                     const placeholderOpt = document.createElement('option');
                     placeholderOpt.value = '';
@@ -57,7 +103,6 @@ export class FormBuilder {
                     placeholderOpt.selected = true;
                     hiddenSelect.appendChild(placeholderOpt);
                 }
-
                 if (field.options) {
                     for (const opt of field.options) {
                         const option = document.createElement('option');
@@ -69,28 +114,21 @@ export class FormBuilder {
                         hiddenSelect.appendChild(option);
                     }
                 }
-
-                // ---------- 构建 DaisyUI Dropdown 结构 ----------
                 const dropdown = document.createElement('div');
                 dropdown.className = 'dropdown dropdown-bottom w-full';
-
                 const triggerBtn = document.createElement('button');
                 triggerBtn.type = 'button';
                 triggerBtn.className = 'btn btn-sm btn-outline w-full justify-between';
-
-                // 更新按钮显示文本
                 const refreshButtonText = () => {
                     const selectedVal = hiddenSelect.value;
                     const selectedOption = field.options?.find(o => String(o.key) === selectedVal);
                     triggerBtn.innerHTML = `${selectedOption?.value || field.placeholder || '请选择'} <span class="text-xs">▼</span>`;
                 };
                 refreshButtonText();
-
                 const menu = document.createElement('ul');
                 menu.className = 'dropdown-content menu p-2 shadow bg-base-100 rounded-box w-full z-50';
                 menu.style.maxHeight = '200px';
                 menu.style.overflowY = 'auto';
-
                 if (field.options) {
                     for (const opt of field.options) {
                         const li = document.createElement('li');
@@ -98,40 +136,30 @@ export class FormBuilder {
                         a.textContent = opt.value;
                         a.addEventListener('click', (e) => {
                             e.preventDefault();
-                            // 更新隐藏 select 的值
                             hiddenSelect.value = String(opt.key);
-                            // 触发 change 事件（便于外部监听）
                             hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                            // 刷新按钮文本
                             refreshButtonText();
-                            // 关闭下拉菜单
                             dropdown.classList.remove('dropdown-open');
                         });
                         li.appendChild(a);
                         menu.appendChild(li);
                     }
                 }
-
-                // 按钮点击切换下拉
                 triggerBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     dropdown.classList.toggle('dropdown-open');
                 });
-
-                // 点击外部关闭下拉
                 document.addEventListener('click', (e) => {
                     if (!dropdown.contains(e.target as Node)) {
                         dropdown.classList.remove('dropdown-open');
                     }
                 });
-
                 dropdown.appendChild(triggerBtn);
                 dropdown.appendChild(menu);
-
                 wrapper.appendChild(hiddenSelect);
                 wrapper.appendChild(dropdown);
-                return wrapper; // 直接返回，无需执行后续通用添加
+                return wrapper;
             }
             case 'checkbox':
                 input = document.createElement('input');
@@ -145,12 +173,10 @@ export class FormBuilder {
         }
 
         if (field.name) input.setAttribute('name', field.name);
-
         if (field.validation?.pattern) {
             input.setAttribute('pattern', field.validation.pattern);
             if (field.validation.message) input.setAttribute('title', field.validation.message);
         }
-
         wrapper.appendChild(input);
         return wrapper;
     }

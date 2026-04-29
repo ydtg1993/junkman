@@ -105,9 +105,11 @@
 <script src="tools/aid.js"></script>
 <script src="tools/paginator.js"></script>
 <script src="tools/table.js"></script>
+<script src="tools/formbuilder.js"></script>
 <script src="tools/selector.js"></script>
 <script src="tools/tabs.js"></script>
 <script src="tools/sidebartabs.js"></script>
+<script src="tools/sortable.js"></script>
 <script>
     function getTreeData() {
         return [
@@ -157,19 +159,6 @@
         return renderSection('🌳 CascadeTree 树形管理器', '右键菜单增删改查、拖拽排序。', api, demo);
     }
 
-    function renderSortable() {
-        const api = `<pre><code>new junkman.Sortable(listElement, options)</code></pre>
-      <h3>选项</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>direction</td><td>拖拽方向</td></tr>
-        <tr><td>onSort</td><td>排序回调</td></tr></table>`;
-        const demo = `<div id="sortableList" class="p-4 border-2 border-dashed border-gray-500 rounded-lg">
-      <div class="drag-item" data-sortable-item data-id="a">📦 项目 A</div>
-      <div class="drag-item" data-sortable-item data-id="b">📦 项目 B</div>
-      <div class="drag-item" data-sortable-item data-id="c">📦 项目 C</div></div>`;
-        return renderSection('🧲 Sortable 拖拽排序', '独立列表拖拽重排。', api, demo);
-    }
-
     function renderModal() {
         const api = `<pre><code>new junkman.Modal(options)</code></pre>
       <h3>选项</h3>
@@ -180,16 +169,6 @@
       <button id="openRemoteModalBtn" class="btn btn-primary btn-sm">远程内容模态框</button>
       <button id="openFormModalBtn" class="btn btn-accent btn-sm">表单提交模态框</button>`;
         return renderSection('🪟 Modal 模态框', '支持遮罩、远程加载、表单。', api, demo);
-    }
-
-    function renderFormBuilder() {
-        const api = `<pre><code>new junkman.FormBuilder(schema).build()</code></pre>
-      <h3>FormFieldSchema 属性</h3>
-      <table class="api-table"><tr><th>属性</th><th>说明</th></tr>
-        <tr><td>name</td><td>字段名</td></tr>
-        <tr><td>type</td><td>类型</td></tr></table>`;
-        const demo = `<div id="formBuilderDemo"></div><button id="getFormDataBtn" class="btn btn-sm btn-outline mt-2">获取表单数据</button><pre id="formResult" class="bg-base-100 p-2 mt-2 rounded"></pre>`;
-        return renderSection('📝 FormBuilder 表单构建器', '通过 schema 快速生成表单。', api, demo);
     }
 
     function initCascadeSelector() {
@@ -216,16 +195,6 @@
         });
     }
 
-    function initSortable() {
-        new junkman.Sortable(document.getElementById('sortableList'), {
-            direction: 'vertical',
-            onSort: (order) => {
-                console.log('排序结果:', order);
-                toast.show({message: '排序已更新', type: 'success'});
-            }
-        });
-    }
-
     function initModal() {
         document.getElementById('openSimpleModalBtn')?.addEventListener('click', () => {
             const modal = new junkman.Modal({title: '简单模态框', aspect: {width: "400px", height: "auto"}, gauze: true});
@@ -247,23 +216,6 @@
                 toast.show({message: `提交: ${formData.get('username')}`, type: 'success'});
             });
             modal.make();
-        });
-    }
-
-    function initFormBuilder() {
-        const schema = [
-            {name: 'username', label: '用户名', type: 'text', required: true},
-            {name: 'age', label: '年龄', type: 'number'},
-            {name: 'gender', label: '性别', type: 'select', options: [{key: 'm', value: '男'}, {key: 'f', value: '女'}]}
-        ];
-        const form = new junkman.FormBuilder(schema).build();
-        document.getElementById('formBuilderDemo')?.appendChild(form);
-        document.getElementById('getFormDataBtn')?.addEventListener('click', () => {
-            const fd = new FormData(document.querySelector('#formBuilderDemo form'));
-            const data = {};
-            fd.forEach((v, k) => data[k] = v);
-            document.getElementById('formResult').textContent = JSON.stringify(data, null, 2);
-            toast.show({message: '已获取表单数据', type: 'success'});
         });
     }
 
@@ -311,6 +263,7 @@
                 ]
             },
             {target: 'table', label: 'Table 表格组件', render: renderTable, afterRender: initTable},
+            {target: 'formbuilder', label: 'FormBuilder 表单构建器', render: renderFormBuilder, afterRender: initFormBuilder},
             {
                 label: '标签页与导航',
                 sub: [
@@ -318,9 +271,8 @@
                     {target: 'sidebartabs',label: 'SidebarTabs 导航分页器',render: renderSidebarTabs,afterRender: initSidebarTabs}
                 ]
             },
-            {target: 'sortable', label: 'Sortable', render: renderSortable, afterRender: initSortable},
+            {target: 'sortable', label: 'Sortable 拖拽排序', render: renderSortable, afterRender: initSortable},
             {target: 'modal', label: 'Modal', render: renderModal, afterRender: initModal},
-            {target: 'formbuilder', label: 'FormBuilder', render: renderFormBuilder, afterRender: initFormBuilder},
             {
                 label: '辅助工具',
                 sub: [
