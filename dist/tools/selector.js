@@ -119,10 +119,12 @@ new junkman.Selector('#selectorSingle',
 ).selected(['2']).make();
 
 // 多选 limit=3
-new junkman.Selector('#selectorMulti',
+let selectorMulti = new junkman.Selector('#selectorMulti',
     { "红": "red", "绿": "green", "蓝": "blue", "黄": "yellow", "紫": "purple" },
     { limit: 3, placeholder: "最多选3个颜色" }
-).selected(['red', 'green']).make();
+).make();
+// 链式调用选择
+selectorMulti.selected(['red', 'green']);
 
 // 方向 Up
 new junkman.Selector('#selectorAuto',
@@ -254,16 +256,16 @@ function initSwitcher() {
     effectDiv.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="mb-4">
-                <p class="font-bold mb-1">横向布局 (towards: Horizontal)</p>
+                <p class="font-bold mb-1">1️⃣ 横向布局 (towards: Horizontal)</p>
                 <div id="switcherHorizontal"></div>
             </div>
             <div class="mb-4">
-                <p class="font-bold mb-1">纵向布局 (towards: Vertical)</p>
+                <p class="font-bold mb-1">2️⃣ 纵向布局 (towards: Vertical)</p>
                 <div id="switcherVertical"></div>
             </div>
         </div>
         <div class="mt-4">
-            <p class="font-bold mb-1">多选横向 (limit:0)</p>
+            <p class="font-bold mb-1">3️⃣ 多选横向 (limit:0)</p>
             <div id="switcherMulti"></div>
         </div>
     `;
