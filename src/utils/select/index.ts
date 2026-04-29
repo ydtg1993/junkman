@@ -1,7 +1,7 @@
 import { SELECTOR_DIRECTION, SELECTOR_MODE, SELECTOR_TOWARDS } from "./types";
 
 export abstract class Select {
-    protected parentNode: HTMLElement = document.body;
+    protected container: HTMLElement;
     protected select: { [key: string]: string } = {};
     protected limitNumber!: number;
     protected selectedData: string[] = [];
@@ -23,7 +23,10 @@ export abstract class Select {
     protected show: boolean = false;
     protected wrap: boolean = false;
 
-    constructor(select: { [key: string]: string }, options: {
+    constructor(
+        container: string | HTMLElement,
+        select: { [key: string]: string },
+        options: {
         limit?: number;
         searchOff?: boolean;
         trigger?: Function;
@@ -34,13 +37,24 @@ export abstract class Select {
         show?: boolean;
         wrap?: boolean;
         menuMaxHeight?: string;
-        parentNode?: HTMLElement;
     }) {
+        // 解析容器
+        if (typeof container === 'string') {
+            const el = document.querySelector<HTMLElement>(container);
+            if (!el) throw new Error(`Selector container not found: ${container}`);
+            this.container = el;
+        } else if (container instanceof HTMLElement) {
+            this.container = container;
+        } else {
+            throw new Error('Invalid container parameter');
+        }
+
         this.select = select;
 
         if (typeof options.limit === "number") {
             this.limitNumber = options.limit;
         }
+        this.searchOff = true;
         if (typeof options.searchOff === "boolean") {
             this.searchOff = options.searchOff;
         }
@@ -70,10 +84,6 @@ export abstract class Select {
         if (options.towards !== undefined && Object.values(SELECTOR_TOWARDS).includes(options.towards)) {
             this.towards = options.towards;
         }
-
-        if (options.parentNode instanceof HTMLElement) {
-            this.parentNode = options.parentNode;
-        }
     }
 
     selected(selected: string[]): this {
@@ -88,7 +98,7 @@ export abstract class Select {
 
         // 异步模拟点击更新子类UI（Menu 专用，Switcher 已重写，不会执行）
         (async () => {
-            const options = this.parentNode.querySelectorAll('.dropdown-content li a');
+            const options = this.container.querySelectorAll('.dropdown-content li a');
             if (options.length > 0) {
                 options.forEach((D) => {
                     if (!(D instanceof HTMLElement)) return;
@@ -99,7 +109,7 @@ export abstract class Select {
                         this.triggerEvent.enable = true;
                     }
                 });
-                const content = this.parentNode.querySelector('.dropdown-content') as HTMLElement;
+                const content = this.container.querySelector('.dropdown-content') as HTMLElement;
                 if (content && !this.show) content.classList.add('hidden');
             }
         })();
@@ -164,13 +174,13 @@ export abstract class Select {
     protected delayExec() {
         if (typeof this.hiddenInput === "string") {
             const name = this.hiddenInput;
-            this.parentNode.insertAdjacentHTML('beforeend', `
+            this.container.insertAdjacentHTML('beforeend', `
 <input name="${name}[select]" value="[]" type="hidden" />
 <input name="${name}[insert]" value="[]" type="hidden" />
 <input name="${name}[delete]" value="[]" type="hidden" />`);
-            this.SELECT_INPUT_DOM = this.parentNode.querySelector(`input[name='${name}[select]']`);
-            this.INSERT_INPUT_DOM = this.parentNode.querySelector(`input[name='${name}[insert]']`);
-            this.DELETE_INPUT_DOM = this.parentNode.querySelector(`input[name='${name}[delete]']`);
+            this.SELECT_INPUT_DOM = this.container.querySelector(`input[name='${name}[select]']`);
+            this.INSERT_INPUT_DOM = this.container.querySelector(`input[name='${name}[insert]']`);
+            this.DELETE_INPUT_DOM = this.container.querySelector(`input[name='${name}[delete]']`);
         }
         if (this.selectedData.length > 0) {
             this.selected(this.selectedData);

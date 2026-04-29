@@ -71,7 +71,7 @@ export class Selector extends Select {
             events: {
                 input: (e: Event, dom: HTMLElement) => {
                     const keywords = (dom as HTMLInputElement).value;
-                    const options: NodeListOf<HTMLElement> = this.parentNode.querySelectorAll('.dropdown-content li a');
+                    const options: NodeListOf<HTMLElement> = this.container.querySelectorAll('.dropdown-content li a');
                     if (!keywords) {
                         options.forEach((a) => (a.parentElement as HTMLElement).classList.remove('hidden'));
                         return;
@@ -189,7 +189,7 @@ export class Selector extends Select {
 
         dropdownWrapper.appendChild(trigger);
         dropdownWrapper.appendChild(dropdownContent);
-        this.parentNode.appendChild(dropdownWrapper);
+        this.container.appendChild(dropdownWrapper);
 
         // 开关下拉
         trigger.addEventListener('click', (e) => {

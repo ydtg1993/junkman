@@ -69,8 +69,7 @@ export class Switcher extends Select {
         };
 
         // 保存按钮容器引用
-        const parentNode = this.parentNode;
-        this.buttonContainer = createDOMFromTree(domTree, parentNode) as HTMLElement;
+        this.buttonContainer = createDOMFromTree(domTree, this.container) as HTMLElement;
 
         // 同步内部状态与 UI（基于 this.selectedData）
         this.syncUIWithSelectedData();

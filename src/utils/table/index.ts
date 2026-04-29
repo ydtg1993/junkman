@@ -403,14 +403,13 @@ export class Table {
                     const menuContainer = document.createElement('div');
                     menuContainer.style.width = '100%';
                     const currentOption = col.options?.list?.find(opt => String(opt.key) === String(value));
-                    const menu = new Selector(selectData, {
+                    const menu = new Selector(menuContainer, selectData, {
                         limit: col.options?.multiple ? 0 : 1,
                         searchOff: true,
                         placeholder: currentOption?.value || '请选择',
                         trigger: (data: any) => this.onCellChange(rowIndex, field, data.value),
                         show: false,
                         direction: SELECTOR_DIRECTION.Down,
-                        parentNode: menuContainer,
                     });
                     menu.make();
                     const triggerEl = menuContainer.querySelector('.btn');
@@ -436,11 +435,10 @@ export class Table {
                         }
                     }
                     const switcherContainer = document.createElement('div');
-                    const switcher = new Switcher(switchData, {
+                    const switcher = new Switcher(switcherContainer, switchData, {
                         limit: 1,
                         trigger: (data: any) => this.onCellChange(rowIndex, field, data.value),
                         towards: col.config?.towards,
-                        parentNode: switcherContainer,
                     });
                     switcher.selected([String(value)]).make();
                     const buttons = switcherContainer.querySelectorAll('.btn');

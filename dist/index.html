@@ -78,15 +78,20 @@
 <body>
 <div id="app"></div>
 </body>
-<script src="table.js"></script>
-<script src="selector.js"></script>
 <script>
+    // ====== 工具函数 ======
+    function escapeHTML(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
     // ========== 全局 Toast ==========
     const toast = new junkman.Toast(junkman.ToastPosition.TopRight);
     const centerToast = new junkman.Toast(junkman.ToastPosition.MiddleCenter);
     window.toast = toast;
     window.centerToast = centerToast;
-
+</script>
+<script src="table.js"></script>
+<script src="selector.js"></script>
+<script>
     function getTreeData() {
         return [
             { key: 1, val: "华北", nodes: [
@@ -488,8 +493,8 @@
             {
                 label: '选择器',
                 sub: [
-                    { target: 'selector', label: 'Selector 下拉菜单', render: renderSelector, afterRender: initSelector },
-                    { target: 'switcher', label: 'Switcher 开关', render: renderSwitcher, afterRender: initSwitcher }
+                    { target: 'selector', label: 'Selector 下拉菜单', render: renderSelector, afterRender: initSelectorTabs },
+                    { target: 'switcher', label: 'Switcher 开关', render: renderSwitcher, afterRender: initSwitcherTabs }
                 ]
             },
             { target: 'paginator', label: 'Paginator 分页器', render: renderPaginator, afterRender: initPaginator },
