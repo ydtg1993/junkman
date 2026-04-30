@@ -72,28 +72,72 @@ function initSortable() {
     const container = document.getElementById('sortableTabs');
     if (!container) return;
 
-    // 效果面板：可排序列表 + 排序后结果展示
+    // ---------- 效果面板 ----------
     const effectDiv = document.createElement('div');
     effectDiv.innerHTML = `
-        <p class="text-sm mb-2">拖拽下方卡片调整顺序：</p>
-        <div id="sortableList" class="space-y-1">
-            <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 A</div>
-            <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 B</div>
-            <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 C</div>
-            <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 D</div>
+        <div class="space-y-6">
+            <!-- 1. 垂直列表 -->
+            <div>
+                <p class="font-bold text-sm mb-1">1️⃣ 垂直列表排序</p>
+                <div id="sortVertical" class="space-y-1">
+                    <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 A</div>
+                    <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 B</div>
+                    <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 C</div>
+                    <div data-sortable-item class="flex items-center gap-2 p-2 bg-base-200 rounded border cursor-grab">📌 项目 D</div>
+                </div>
+                <div class="text-xs text-base-content/60 mt-1" id="sortVerticalOrder"></div>
+            </div>
+
+            <!-- 2. 水平列表 -->
+            <div>
+                <p class="font-bold text-sm mb-1">2️⃣ 水平列表排序</p>
+                <div id="sortHorizontal" class="flex gap-2 w-80">
+                    <div data-sortable-item class="flex-shrink-0 p-2 bg-base-200 rounded border cursor-grab">🔴 红</div>
+                    <div data-sortable-item class="flex-shrink-0 p-2 bg-base-200 rounded border cursor-grab">🟢 绿</div>
+                    <div data-sortable-item class="flex-shrink-0 p-2 bg-base-200 rounded border cursor-grab">🔵 蓝</div>
+                    <div data-sortable-item class="flex-shrink-0 p-2 bg-base-200 rounded border cursor-grab">🟡 黄</div>
+                </div>
+                <div class="text-xs text-base-content/60 mt-1" id="sortHorizontalOrder"></div>
+            </div>
+
+            <!-- 3. 网格布局 (auto 模式) -->
+            <div>
+                <p class="font-bold text-sm mb-1">3️⃣ 网格布局排序 (auto)</p>
+                <div id="sortGrid" class="grid grid-cols-3 gap-2 w-80" style=" display: grid;grid-template-columns: 1fr 1fr 1fr 1fr;">
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">1</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">2</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">3</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">4</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">5</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">6</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">7</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">8</div>
+                    <div data-sortable-item class="w-14 h-16 flex items-center justify-center bg-base-200 rounded border cursor-grab">9</div>
+                </div>
+                <div class="text-xs text-base-content/60 mt-1" id="sortGridOrder"></div>
+            </div>
         </div>
-        <div class="mt-2 text-xs text-base-content/60" id="sortOrder"></div>
     `;
 
-    // 代码面板
+    // ---------- 代码面板 ----------
     const codeDiv = document.createElement('div');
     codeDiv.innerHTML = `<pre><code class="language-javascript">${escapeHTML(`
-const list = document.getElementById('sortableList');
-new junkman.Sortable(list, {
+// 垂直排序
+new junkman.Sortable(document.getElementById('sortVertical'), {
     direction: 'vertical',
-    onSort: (order) => {
-        console.log('新顺序:', order);
-    }
+    onSort: (order) => console.log(order)
+});
+
+// 水平排序
+new junkman.Sortable(document.getElementById('sortHorizontal'), {
+    direction: 'horizontal',
+    onSort: (order) => console.log(order)
+});
+
+// 网格排序（auto 模式，多行多列）
+new junkman.Sortable(document.getElementById('sortGrid'), {
+    direction: 'auto',
+    onSort: (order) => console.log(order)
 });
     `.trim())}</code></pre>`;
 
@@ -104,15 +148,16 @@ new junkman.Sortable(list, {
         ]
     });
 
-    // 初始化 Sortable
-    const listEl = effectDiv.querySelector('#sortableList');
-    if (!listEl) return;
+    // 实例化 Sortable
+    const v = document.getElementById('sortVertical');
+    const vo = document.getElementById('sortVerticalOrder');
+    if (v) new junkman.Sortable(v, { direction: 'vertical', onSort: order => { if (vo) vo.textContent = `顺序: ${order.join(' → ')}`; } });
 
-    const orderEl = effectDiv.querySelector('#sortOrder');
-    new junkman.Sortable(listEl, {
-        direction: 'vertical',
-        onSort: (order) => {
-            if (orderEl) orderEl.textContent = `当前顺序: ${order.join(' → ')}`;
-        }
-    });
+    const h = document.getElementById('sortHorizontal');
+    const ho = document.getElementById('sortHorizontalOrder');
+    if (h) new junkman.Sortable(h, { direction: 'horizontal', onSort: order => { if (ho) ho.textContent = `顺序: ${order.join(' → ')}`; } });
+
+    const g = document.getElementById('sortGrid');
+    const go = document.getElementById('sortGridOrder');
+    if (g) new junkman.Sortable(g, { direction: 'auto', onSort: order => { if (go) go.textContent = `顺序: ${order.join(' → ')}`; } });
 }

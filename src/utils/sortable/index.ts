@@ -1,5 +1,5 @@
 export interface SortableOptions {
-    direction?: 'vertical' | 'horizontal';
+    direction?: 'vertical' | 'horizontal' | 'auto';
     handle?: string;
     animationSpeed?: number;
     onSort?: (order: (string | number)[]) => void;
@@ -66,6 +66,76 @@ export class Sortable {
     private getAllItems(): HTMLElement[] {
         return Array.from(this.list.querySelectorAll<HTMLElement>('[data-sortable-item]'))
             .filter(el => el !== this.placeholder);
+    }
+
+    // 判断是否自动模式（网格）
+    private isAuto(): boolean {
+        return this.options.direction === 'auto';
+    }
+
+    // 通用：取两个方向的坐标
+    private getPosition(e: PointerEvent): { x: number; y: number } {
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    // 获取元素中心坐标
+    private getElementCenter(el: HTMLElement): { x: number; y: number } {
+        const rect = el.getBoundingClientRect();
+        return {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
+    }
+
+    // 计算鼠标到元素中心点的距离
+    private distance(mouse: { x: number; y: number }, center: { x: number; y: number }): number {
+        return Math.sqrt(Math.pow(mouse.x - center.x, 2) + Math.pow(mouse.y - center.y, 2));
+    }
+
+    // 更新占位符插入位置（重写，支持 auto）
+    private updatePlaceholderPosition(e: PointerEvent) {
+        const mouse = this.getPosition(e);
+        const items = this.getItems();
+        if (items.length === 0) return;
+
+        let targetItem: HTMLElement | null = null;
+        let insertAfter = false;
+        let minDist = Infinity;
+
+        // 遍历所有可排序项，找出距离鼠标中心最近的元素
+        for (const el of items) {
+            if (el === this.dragItem) continue;
+            const center = this.getElementCenter(el);
+            const dist = this.distance(mouse, center);
+            if (dist < minDist) {
+                minDist = dist;
+                targetItem = el;
+                // 决定插入在目标项之前还是之后：
+                // 对于垂直或水平，保持原逻辑；对于 auto 模式，根据鼠标与目标中心的相对位置决定
+                if (this.options.direction === 'vertical') {
+                    insertAfter = mouse.y > center.y;
+                } else if (this.options.direction === 'horizontal') {
+                    insertAfter = mouse.x > center.x;
+                } else { // auto
+                    // 同时考虑两个方向，以主要偏移方向为准
+                    const dx = mouse.x - center.x;
+                    const dy = mouse.y - center.y;
+                    // 如果水平偏移更大，则以水平为主；否则垂直为主
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        insertAfter = dx > 0;
+                    } else {
+                        insertAfter = dy > 0;
+                    }
+                }
+            }
+        }
+
+        if (targetItem && this.placeholder) {
+            this.list.insertBefore(
+                this.placeholder,
+                insertAfter ? targetItem.nextSibling : targetItem,
+            );
+        }
     }
 
     // ──────────────────────── 占位符与克隆 ────────────────────────
@@ -222,49 +292,6 @@ export class Sortable {
             } else if (rect.right - mouseX < edgeThreshold && rect.right - mouseX > 0) {
                 this.list.scrollLeft += scrollSpeed;
             }
-        }
-    }
-
-    private updatePlaceholderPosition(e: PointerEvent) {
-        const mousePos = this.getPoint(e);
-        const items = this.getItems();
-        if (items.length === 0) return;
-
-        let targetItem: HTMLElement | null = null;
-        let insertAfter = false;
-        const lastItem = items[items.length - 1];
-        const firstItem = items[0];
-        if (!lastItem) return;
-
-        const lastItemEnd = this.getPrimaryClientPos(lastItem) + this.getPrimarySize(lastItem);
-        const firstItemPos = this.getPrimaryClientPos(firstItem);
-
-        if (mousePos > lastItemEnd) {
-            targetItem = lastItem;
-            insertAfter = true;
-        } else if (mousePos < firstItemPos) {
-            targetItem = firstItem;
-            insertAfter = false;
-        } else {
-            let minDist = Infinity;
-            for (const el of items) {
-                if (el === this.dragItem) continue;
-                const elPos = this.getPrimaryClientPos(el);
-                const center = elPos + this.getPrimarySize(el) / 2;
-                const dist = Math.abs(mousePos - center);
-                if (dist < minDist) {
-                    minDist = dist;
-                    targetItem = el;
-                    insertAfter = mousePos > center;
-                }
-            }
-        }
-
-        if (targetItem && this.placeholder) {
-            this.list.insertBefore(
-                this.placeholder,
-                insertAfter ? targetItem.nextSibling : targetItem,
-            );
         }
     }
 
